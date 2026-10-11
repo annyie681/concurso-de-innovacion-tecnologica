@@ -8,16 +8,9 @@
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
     <style>
-      .bg-base {
-        background-color: #FFBDB0 !important;
-      }
-      .texto-rojo {
-        color: #A31F05 !important;
-      }
-      .box {
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      }
+      .bg-base { background-color: #FFBDB0 !important; }
+      .texto-rojo { color: #A31F05 !important; }
+      .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     </style>
   </head>
   <body>
@@ -29,11 +22,11 @@
               <div class="box p-6">
                 <h1 class="title has-text-centered texto-rojo mb-5">Iniciar Sesión</h1>
                 
-                <form>
+                <form id="login-form">
                   <div class="field">
                     <label class="label">Correo electrónico</label>
                     <div class="control has-icons-left">
-                      <input class="input" type="email" placeholder="ejemplo@correo.com">
+                      <input class="input" type="email" id="login-email" placeholder="ejemplo@correo.com" required>
                       <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
                     </div>
                   </div>
@@ -41,13 +34,15 @@
                   <div class="field">
                     <label class="label">Contraseña</label>
                     <div class="control has-icons-left">
-                      <input class="input" type="password" placeholder="********">
+                      <input class="input" type="password" id="login-password" placeholder="********" required>
                       <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
                     </div>
                   </div>
 
+                  <div id="login-message" class="has-text-centered mb-3"></div>
+
                   <div class="field mt-5">
-                    <button class="button is-primary is-fullwidth"><strong>Entrar</strong></button>
+                    <button type="submit" class="button is-primary is-fullwidth"><strong>Entrar</strong></button>
                   </div>
                 </form>
 
@@ -64,5 +59,47 @@
         </div>
       </div>
     </section>
+
+    <!-- Scripts de Firebase -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
+        authDomain: "bd-concurso.firebaseapp.com",
+        projectId: "bd-concurso",
+        storageBucket: "bd-concurso.firebasestorage.app",
+        messagingSenderId: "944372990629",
+        appId: "1:944372990629:web:1bd61c44cf1274eadc034c",
+        measurementId: "G-LMSMQBD5CL"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const msgDiv = document.getElementById('login-message');
+
+        msgDiv.innerHTML = "<p class='has-text-info'>Iniciando sesión...</p>";
+
+        signInWithEmailAndPassword(auth, email, password)
+          .then((userCredential) => {
+            msgDiv.innerHTML = "<p class='has-text-success has-text-weight-bold'>¡Bienvenido! Entrando...</p>";
+            setTimeout(() => { window.location.href = "index.html"; }, 1500);
+          })
+          .catch((error) => {
+            // Un mensaje más amigable si se equivocan de clave
+            if(error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password'){
+               msgDiv.innerHTML = `<p class='has-text-danger'>Correo o contraseña incorrectos.</p>`;
+            } else {
+               msgDiv.innerHTML = `<p class='has-text-danger'>Error: ${error.message}</p>`;
+            }
+          });
+      });
+    </script>
   </body>
 </html>
