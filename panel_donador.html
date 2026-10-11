@@ -11,12 +11,11 @@
       .bg-base { background-color: #FFBDB0 !important; }
       .texto-rojo { color: #A31F05 !important; }
       .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-      #panel-content { display: none; } /* Oculto hasta verificar sesión */
+      #panel-content { display: none; }
     </style>
   </head>
   <body class="bg-base">
     
-    <!-- Navbar -->
     <nav class="navbar is-white" style="border-radius: 0 0 15px 15px; margin-bottom: 2rem; padding: 0.5rem 2rem;">
       <div class="navbar-brand">
         <a class="navbar-item texto-rojo has-text-weight-bold is-size-4" href="index.html">
@@ -42,24 +41,24 @@
           ¡Hola de nuevo! <span id="user-email" class="is-size-4 has-text-weight-normal"></span>
         </h1>
 
-        <!-- Estadísticas de Impacto -->
+        <!-- Estadísticas de Impacto (AQUÍ PUSIMOS IDs) -->
         <div class="columns mb-5">
           <div class="column is-4">
             <div class="box has-text-centered">
-              <p class="heading">Comida Salvada (Mes)</p>
-              <p class="title texto-rojo">125 kg</p>
+              <p class="heading">Comida Salvada</p>
+              <p class="title texto-rojo"><span id="stat-kilos">0</span> kg</p>
             </div>
           </div>
           <div class="column is-4">
             <div class="box has-text-centered">
               <p class="heading">Alertas Emitidas</p>
-              <p class="title texto-rojo">8</p>
+              <p class="title texto-rojo" id="stat-alertas">0</p>
             </div>
           </div>
           <div class="column is-4">
             <div class="box has-text-centered">
-              <p class="heading">Albergues Ayudados</p>
-              <p class="title texto-rojo">3</p>
+              <p class="heading">Estado</p>
+              <p class="title texto-rojo is-size-5 mt-2">Activo <i class="fa-solid fa-circle-check has-text-success"></i></p>
             </div>
           </div>
         </div>
@@ -68,14 +67,15 @@
           <!-- Formulario de Alertas -->
           <div class="column is-5">
             <div class="box p-5" style="height: 100%;">
-              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-bullhorn mr-2"></i> Emitir Alerta (72h)</h2>
+              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-bullhorn mr-2"></i> Emitir Alerta</h2>
               <p class="mb-4 has-text-grey is-size-7">Registra un lote a punto de caducar. El sistema notificará a los albergues cercanos.</p>
               
-              <form>
+              <form id="form-alerta">
                 <div class="field">
                   <label class="label">Descripción del Alimento</label>
                   <div class="control has-icons-left">
-                    <input class="input" type="text" placeholder="Ej. 2 cajas de pan, 15kg de verdura...">
+                    <!-- ID AGREGADO -->
+                    <input class="input" type="text" id="alerta-desc" placeholder="Ej. 2 cajas de pan..." required>
                     <span class="icon is-small is-left"><i class="fa-solid fa-carrot"></i></span>
                   </div>
                 </div>
@@ -85,7 +85,8 @@
                     <div class="field">
                       <label class="label">Peso Aprox (kg)</label>
                       <div class="control">
-                        <input class="input" type="number" placeholder="Ej. 20">
+                        <!-- ID AGREGADO -->
+                        <input class="input" type="number" id="alerta-peso" placeholder="Ej. 20" required>
                       </div>
                     </div>
                   </div>
@@ -94,10 +95,11 @@
                       <label class="label">Caduca en</label>
                       <div class="control">
                         <div class="select is-fullwidth">
-                          <select>
-                            <option>72 horas</option>
-                            <option>48 horas</option>
-                            <option>24 horas (Urgente)</option>
+                          <!-- ID AGREGADO -->
+                          <select id="alerta-tiempo">
+                            <option value="72">72 horas</option>
+                            <option value="48">48 horas</option>
+                            <option value="24">24 horas (Urgente)</option>
                           </select>
                         </div>
                       </div>
@@ -106,7 +108,8 @@
                 </div>
 
                 <div class="field mt-4">
-                  <button type="button" class="button is-info is-fullwidth is-medium">
+                  <!-- ID AGREGADO AL BOTÓN -->
+                  <button type="submit" id="btn-lanzar" class="button is-info is-fullwidth is-medium">
                     <strong><i class="fa-solid fa-paper-plane mr-2"></i> Lanzar Alerta</strong>
                   </button>
                 </div>
@@ -120,32 +123,9 @@
               <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-route mr-2"></i> Monitor de Trazabilidad</h2>
               <p class="mb-4 has-text-grey is-size-7">Sigue el estado de tus alertas activas y verifica entregas.</p>
               
-              <!-- Ejemplo de una alerta "Buscando voluntario" -->
-              <div class="box mb-3" style="border-left: 5px solid #ffdd57;">
-                <div class="columns is-vcentered">
-                  <div class="column is-7">
-                    <p class="has-text-weight-bold">15kg de Lácteos y Yogur</p>
-                    <p class="is-size-7 has-text-grey">Albergue destino: "Comedor La Esperanza"</p>
-                  </div>
-                  <div class="column is-5 has-text-right">
-                    <span class="tag is-warning"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscando Repartidor</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Ejemplo de una alerta "En camino" con PIN -->
-              <div class="box mb-3" style="border-left: 5px solid #48c774;">
-                <div class="columns is-vcentered">
-                  <div class="column is-7">
-                    <p class="has-text-weight-bold">3 Cajas de Panadería</p>
-                    <p class="is-size-7 has-text-grey">Voluntario: Juan P. (Toyota Yaris)</p>
-                  </div>
-                  <div class="column is-5 has-text-right">
-                    <span class="tag is-success mb-2"><i class="fa-solid fa-truck-fast mr-1"></i> En camino a recolectar</span>
-                    <br>
-                    <span class="is-size-7 has-text-weight-bold">PIN de entrega: <span class="texto-rojo">8492</span></span>
-                  </div>
-                </div>
+              <!-- AQUÍ SE VAN A DIBUJAR LAS TARJETAS AUTOMÁTICAMENTE -->
+              <div id="contenedor-monitor">
+                <p class="has-text-grey has-text-centered mt-6">Cargando alertas...</p>
               </div>
 
             </div>
@@ -155,10 +135,12 @@
       </div>
     </section>
 
-    <!-- Script de Firebase para proteger la ruta -->
+    <!-- Scripts de Firebase -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
       import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      // IMPORTAMOS LAS HERRAMIENTAS NUEVAS DE FIRESTORE
+      import { getFirestore, collection, addDoc, serverTimestamp, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
@@ -172,20 +154,104 @@
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
+      const db = getFirestore(app);
+      
+      let currentUser = null;
 
+      // 1. VERIFICAR SESIÓN Y CARGAR DATOS
       onAuthStateChanged(auth, (user) => {
         if (user) {
+          currentUser = user;
           document.getElementById('panel-content').style.display = 'block';
           document.getElementById('user-email').innerText = user.email;
+
+          // 2. ESCUCHAR LA BASE DE DATOS EN TIEMPO REAL
+          const q = query(collection(db, "alertas"), where("donadorId", "==", user.uid));
+          
+          onSnapshot(q, (snapshot) => {
+            const contenedor = document.getElementById('contenedor-monitor');
+            contenedor.innerHTML = ''; // Limpiamos el contenedor
+            let totalKilos = 0;
+            let totalAlertas = 0;
+
+            if (snapshot.empty) {
+              contenedor.innerHTML = '<p class="has-text-grey has-text-centered mt-6">No tienes alertas activas. ¡Lanza una!</p>';
+            }
+
+            // Dibujamos tarjeta por tarjeta
+            snapshot.forEach((doc) => {
+              const alerta = doc.data();
+              totalAlertas++;
+              totalKilos += Number(alerta.peso);
+
+              // Decidir color y etiqueta según el estado
+              let colorBorde = alerta.estado === 'Buscando Repartidor' ? '#ffdd57' : '#48c774';
+              let tagEstado = alerta.estado === 'Buscando Repartidor' 
+                ? '<span class="tag is-warning"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscando Repartidor</span>' 
+                : `<span class="tag is-success mb-2"><i class="fa-solid fa-truck-fast mr-1"></i> En camino</span><br><span class="is-size-7 has-text-weight-bold">PIN: <span class="texto-rojo">${alerta.pinSeguridad || '---'}</span></span>`;
+
+              contenedor.innerHTML += `
+                <div class="box mb-3" style="border-left: 5px solid ${colorBorde};">
+                  <div class="columns is-vcentered">
+                    <div class="column is-7">
+                      <p class="has-text-weight-bold">${alerta.peso}kg de ${alerta.descripcion}</p>
+                      <p class="is-size-7 has-text-grey">Límite: ${alerta.tiempoCaducidad} horas</p>
+                    </div>
+                    <div class="column is-5 has-text-right">
+                      ${tagEstado}
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+
+            // Actualizamos los números de arriba
+            document.getElementById('stat-kilos').innerText = totalKilos;
+            document.getElementById('stat-alertas').innerText = totalAlertas;
+          });
+
         } else {
           window.location.href = "login.html";
         }
       });
 
+      // 3. GUARDAR NUEVA ALERTA AL DAR CLIC
+      document.getElementById('form-alerta').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btnLanzar = document.getElementById('btn-lanzar');
+        const desc = document.getElementById('alerta-desc').value;
+        const peso = document.getElementById('alerta-peso').value;
+        const tiempo = document.getElementById('alerta-tiempo').value;
+
+        btnLanzar.classList.add('is-loading'); // Efecto de cargando al botón
+
+        try {
+          await addDoc(collection(db, "alertas"), {
+            descripcion: desc,
+            peso: Number(peso),
+            tiempoCaducidad: tiempo,
+            donadorId: currentUser.uid,
+            donadorEmail: currentUser.email,
+            estado: 'Buscando Repartidor',
+            pinSeguridad: Math.floor(1000 + Math.random() * 9000).toString(), // Genera un PIN aleatorio de 4 dígitos
+            fechaCreacion: serverTimestamp()
+          });
+
+          // Limpiamos las cajas de texto después de guardar
+          document.getElementById('alerta-desc').value = '';
+          document.getElementById('alerta-peso').value = '';
+          btnLanzar.classList.remove('is-loading');
+
+        } catch (error) {
+          console.error("Error al guardar: ", error);
+          alert("Hubo un problema al guardar la alerta.");
+          btnLanzar.classList.remove('is-loading');
+        }
+      });
+
+      // Botón salir
       document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
-        signOut(auth).then(() => {
-          window.location.href = "index.html";
-        });
+        signOut(auth).then(() => { window.location.href = "index.html"; });
       });
     </script>
   </body>
