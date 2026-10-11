@@ -39,8 +39,23 @@
                     </div>
                   </div>
 
-                  <!-- Aquí aparecerán los mensajes de error o éxito -->
-                  <div id="signup-message" class="has-text-centered mb-3"></div>
+                  <!-- NUEVO: Selección de Rol -->
+                  <div class="field">
+                    <label class="label">¿Qué tipo de cuenta necesitas?</label>
+                    <div class="control has-icons-left">
+                      <div class="select is-fullwidth">
+                        <select id="signup-rol" required>
+                          <option value="" disabled selected>Selecciona tu rol...</option>
+                          <option value="donador">Donador (Supermercado)</option>
+                          <option value="receptor">Receptor (Albergue)</option>
+                          <option value="repartidor">Repartidor (Voluntario)</option>
+                        </select>
+                      </div>
+                      <span class="icon is-small is-left"><i class="fa-solid fa-users"></i></span>
+                    </div>
+                  </div>
+
+                  <div id="signup-message" class="has-text-centered mb-3 mt-4"></div>
 
                   <div class="field mt-5">
                     <button type="submit" class="button is-info is-fullwidth"><strong>Registrarme</strong></button>
@@ -61,13 +76,13 @@
       </div>
     </section>
 
-    <!-- Scripts de Firebase -->
+    <!-- Scripts de Firebase actualizados -->
     <script type="module">
-      // Importar Firebase
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
       import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      // IMPORTAMOS LA BASE DE DATOS
+      import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-      // Tu configuración
       const firebaseConfig = {
         apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
         authDomain: "bd-concurso.firebaseapp.com",
@@ -78,23 +93,30 @@
         measurementId: "G-LMSMQBD5CL"
       };
 
-      // Inicializar Firebase
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
+      const db = getFirestore(app); // INICIAMOS LA BASE DE DATOS
 
-      // Manejar el formulario
       document.getElementById('signup-form').addEventListener('submit', (e) => {
-        e.preventDefault(); // Evita que la página recargue
+        e.preventDefault();
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
+        const rol = document.getElementById('signup-rol').value; // SACAMOS EL ROL ELEGIDO
         const msgDiv = document.getElementById('signup-message');
 
-        msgDiv.innerHTML = "<p class='has-text-info'>Registrando...</p>";
+        msgDiv.innerHTML = "<p class='has-text-info'>Configurando tu cuenta...</p>";
 
         createUserWithEmailAndPassword(auth, email, password)
-          .then((userCredential) => {
+          .then(async (userCredential) => {
+            const user = userCredential.user;
+            
+            // GUARDAMOS EL ROL EN LA BASE DE DATOS
+            await setDoc(doc(db, "usuarios", user.uid), {
+              correo: email,
+              rol: rol
+            });
+
             msgDiv.innerHTML = "<p class='has-text-success has-text-weight-bold'>¡Cuenta creada con éxito! Llevándote al inicio...</p>";
-            // Esperar 2 segundos y redirigir
             setTimeout(() => { window.location.href = "index.html"; }, 2000);
           })
           .catch((error) => {
