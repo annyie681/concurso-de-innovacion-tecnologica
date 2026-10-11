@@ -1,83 +1,4 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Panel de Albergue - Receptor</title>
-    <link rel="stylesheet" href="assets/css/bulma.min.css" />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
-    <style>
-      .bg-base { background-color: #FFBDB0 !important; }
-      .texto-rojo { color: #A31F05 !important; }
-      .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-      #panel-content { display: none; }
-    </style>
-  </head>
-  <body class="bg-base">
-    
-    <nav class="navbar is-white" style="border-radius: 0 0 15px 15px; margin-bottom: 2rem; padding: 0.5rem 2rem;">
-      <div class="navbar-brand">
-        <a class="navbar-item texto-rojo has-text-weight-bold is-size-4" href="index.html">
-          <i class="fa-solid fa-house-chimney-window mr-2"></i> Inicio
-        </a>
-      </div>
-      <div class="navbar-menu is-active" style="background: transparent; box-shadow: none;">
-        <div class="navbar-end">
-          <div class="navbar-item">
-            <span class="tag is-light is-medium mr-4 texto-rojo">Perfil: Albergue/Receptor</span>
-            <button id="btn-cerrar-sesion" class="button is-danger is-outlined">
-              <i class="fa-solid fa-right-from-bracket mr-2"></i> Salir
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <section class="section pt-0" id="panel-content">
-      <div class="container">
-        
-        <h1 class="title texto-rojo mb-6">
-          ¡Qué onda! <span id="user-email" class="is-size-4 has-text-weight-normal"></span>
-        </h1>
-
-        <div class="columns is-variable is-6">
-          
-          <!-- Radar de Donaciones -->
-          <div class="column is-6">
-            <div class="box p-5" style="height: 100%;">
-              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-satellite-dish mr-2"></i> Radar de Donaciones</h2>
-              <p class="mb-4 has-text-grey is-size-7">Alimentos disponibles cerca de ti. Acepta solo lo que puedas aprovechar.</p>
-              
-              <!-- AQUÍ SE DIBUJAN LAS ALERTAS DISPONIBLES -->
-              <div id="contenedor-radar">
-                <p class="has-text-grey has-text-centered mt-5">Buscando donaciones cercanas...</p>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Entregas en Camino -->
-          <div class="column is-6">
-            <div class="box p-5" style="height: 100%; background-color: #fcfcfc;">
-              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-map-location-dot mr-2"></i> Entregas en Camino</h2>
-              <p class="mb-4 has-text-grey is-size-7">Rastrea a los voluntarios que se dirigen hacia tu ubicación.</p>
-              
-              <!-- AQUÍ SE DIBUJAN LAS DONACIONES QUE RECLAMASTE -->
-              <div id="contenedor-entregas">
-                <div class="notification is-light is-size-7 mt-5">
-                  <i class="fa-solid fa-circle-info mr-2"></i> Cuando reclames una donación, aparecerá aquí.
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <script type="module">
+<script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
       import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
       import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
@@ -95,6 +16,17 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
       let currentUser = null;
+      let miLat = 0, miLng = 0;
+
+      // FÓRMULA MATEMÁTICA REAL PARA MEDIR DISTANCIA EN KILÓMETROS
+      function calcularDistancia(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Radio de la Tierra en km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return (R * c).toFixed(1); 
+      }
 
       onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -102,120 +34,77 @@
           document.getElementById('panel-content').style.display = 'block';
           document.getElementById('user-email').innerText = user.email;
 
-          // Escuchar todas las alertas en tiempo real
-          onSnapshot(collection(db, "alertas"), (snapshot) => {
-            const radar = document.getElementById('contenedor-radar');
-            const entregas = document.getElementById('contenedor-entregas');
-            
-            radar.innerHTML = ''; 
-            entregas.innerHTML = '';
-            let donacionesDisponibles = 0;
-            let donacionesReclamadas = 0;
+          // Pedimos la ubicación real del albergue
+          navigator.geolocation.getCurrentPosition((pos) => {
+            miLat = pos.coords.latitude;
+            miLng = pos.coords.longitude;
 
-            snapshot.forEach((docSnap) => {
-              const alerta = docSnap.data();
-              const id = docSnap.id;
+            onSnapshot(collection(db, "alertas"), (snapshot) => {
+              const radar = document.getElementById('contenedor-radar');
+              const entregas = document.getElementById('contenedor-entregas');
+              radar.innerHTML = ''; entregas.innerHTML = '';
+              let donacionesDisponibles = 0; let donacionesReclamadas = 0;
 
-              // Generar distancia aleatoria para el prototipo (1.0 km a 8.0 km)
-              const distanciaRandom = (Math.random() * 7 + 1).toFixed(1);
+              snapshot.forEach((docSnap) => {
+                const alerta = docSnap.data();
+                const id = docSnap.id;
 
-              // 1. SI NADIE LA HA RECLAMADO, APARECE EN EL RADAR
-              if (!alerta.receptorId) {
-                donacionesDisponibles++;
-                radar.innerHTML += `
-                  <div class="box mb-4" style="border: 2px dashed #ffdd57; background-color: #fffdf5;">
-                    <div class="columns is-mobile is-vcentered">
-                      <div class="column is-8">
-                        <p class="has-text-weight-bold is-size-5">${alerta.peso}kg de${alerta.descripcion}</p>
-                        <p class="is-size-7 has-text-grey"><i class="fa-solid fa-shop mr-1"></i> ${alerta.donadorEmail}</p>
-                        <p class="is-size-7 has-text-danger mt-1"><i class="fa-solid fa-clock mr-1"></i> Límite: ${alerta.tiempoCaducidad} horas</p>
-                      </div>
-                      <div class="column is-4 has-text-right">
-                        <span class="tag is-warning is-light mb-2"><i class="fa-solid fa-location-dot mr-1"></i> a ${distanciaRandom} km</span><br>
-                        <button class="button is-info is-small" onclick="window.reclamarAlerta('${id}')">
-                          <strong>Reclamar</strong>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              } 
-              
-              // 2. SI ESTE ALBERGUE LA RECLAMÓ, APARECE EN SUS ENTREGAS
-              else if (alerta.receptorId === currentUser.uid) {
-                donacionesReclamadas++;
-                
-                // Mostrar si ya viene un repartidor o si seguimos buscando uno
-                let infoLogistica = alerta.estado === 'En camino' 
-                  ? `<span class="tag is-success mb-2"><i class="fa-solid fa-car mr-1"></i> ¡Repartidor en camino!</span>`
-                  : `<span class="tag is-warning is-light mb-2"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Buscando voluntario...</span>`;
+                // Calculamos la distancia REAL con las coordenadas
+                let distancia = "N/A ";
+                if(alerta.latitud && alerta.longitud) {
+                  distancia = calcularDistancia(miLat, miLng, alerta.latitud, alerta.longitud);
+                }
 
-                let btnConfirmar = alerta.estado === 'En camino'
-                  ? `<button class="button is-primary is-small is-outlined mt-2" onclick="window.confirmarRecepcion('${id}')"><i class="fa-solid fa-check-double mr-1"></i> Confirmar Recepción</button>`
-                  : ``;
-
-                entregas.innerHTML += `
-                  <div class="box mb-3" style="border-left: 5px solid #48c774;">
-                    <div class="columns is-vcentered">
-                      <div class="column is-7">
-                        <p class="has-text-weight-bold">${alerta.peso}kg de ${alerta.descripcion}</p>
-                        <p class="is-size-7 has-text-grey mt-1">
-                          <i class="fa-solid fa-shop mr-1"></i> De: ${alerta.donadorEmail}
-                        </p>
-                      </div>
-                      <div class="column is-5 has-text-right">
-                        ${infoLogistica}
-                        <br>
-                        ${btnConfirmar}
+                if (!alerta.receptorId) {
+                  donacionesDisponibles++;
+                  radar.innerHTML += `
+                    <div class="box mb-4" style="border: 2px dashed #ffdd57; background-color: #fffdf5;">
+                      <div class="columns is-mobile is-vcentered">
+                        <div class="column is-8">
+                          <p class="has-text-weight-bold is-size-5">${alerta.peso}kg de ${alerta.descripcion}</p>
+                          <p class="is-size-7 has-text-grey"><i class="fa-solid fa-shop mr-1"></i> ${alerta.donadorEmail}</p>
+                          <p class="is-size-7 has-text-danger mt-1"><i class="fa-solid fa-clock mr-1"></i> Límite: ${alerta.tiempoCaducidad} horas</p>
+                        </div>
+                        <div class="column is-4 has-text-right">
+                          <span class="tag is-warning is-light mb-2"><i class="fa-solid fa-location-dot mr-1"></i> a ${distancia} km</span><br>
+                          <button class="button is-info is-small" onclick="window.reclamarAlerta('${id}')"><strong>Reclamar</strong></button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                `;
-              }
+                  `;
+                } else if (alerta.receptorId === currentUser.uid) {
+                  donacionesReclamadas++;
+                  let infoLogistica = alerta.estado === 'En camino a recolectar' || alerta.estado === 'En camino al albergue'
+                    ? `<span class="tag is-success mb-2"><i class="fa-solid fa-car mr-1"></i> ¡Repartidor asignado!</span>`
+                    : `<span class="tag is-warning is-light mb-2"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Buscando voluntario...</span>`;
+
+                  entregas.innerHTML += `
+                    <div class="box mb-3" style="border-left: 5px solid #48c774;">
+                      <div class="columns is-vcentered">
+                        <div class="column is-7">
+                          <p class="has-text-weight-bold">${alerta.peso}kg de ${alerta.descripcion}</p>
+                          <p class="is-size-7 has-text-grey mt-1">De: ${alerta.donadorEmail}</p>
+                        </div>
+                        <div class="column is-5 has-text-right">${infoLogistica}</div>
+                      </div>
+                    </div>
+                  `;
+                }
+              });
+              if (donacionesDisponibles === 0) radar.innerHTML = '<p class="has-text-grey has-text-centered mt-5">Por ahora no hay donaciones cercanas.</p>';
+              if (donacionesReclamadas === 0) entregas.innerHTML = '<div class="notification is-light is-size-7 mt-5"><i class="fa-solid fa-circle-info mr-2"></i> Cuando reclames una donación, aparecerá aquí.</div>';
             });
-
-            if (donacionesDisponibles === 0) {
-              radar.innerHTML = '<p class="has-text-grey has-text-centered mt-5">Por ahora no hay donaciones cercanas.</p>';
-            }
-            if (donacionesReclamadas === 0) {
-              entregas.innerHTML = '<div class="notification is-light is-size-7 mt-5"><i class="fa-solid fa-circle-info mr-2"></i> Cuando reclames una donación, aparecerá aquí.</div>';
-            }
+          }, (error) => {
+            alert("Por favor, permite el acceso a tu ubicación para ver los donativos cercanos a ti.");
           });
-        } else {
-          window.location.href = "login.html";
         }
       });
 
-      // FUNCIÓN PARA RECLAMAR UNA DONACIÓN
       window.reclamarAlerta = async function(idAlerta) {
         try {
-          const alertaRef = doc(db, "alertas", idAlerta);
-          await updateDoc(alertaRef, {
-            receptorId: currentUser.uid,
-            receptorEmail: currentUser.email
-          });
-        } catch (error) {
-          console.error("Error al reclamar:", error);
-          alert("Hubo un error al intentar reclamar esta donación.");
-        }
+          await updateDoc(doc(db, "alertas", idAlerta), { receptorId: currentUser.uid, receptorEmail: currentUser.email });
+        } catch (error) { console.error(error); }
       };
 
-      // FUNCIÓN PARA CONFIRMAR QUE LLEGÓ EL ALIMENTO (Cierra el ciclo)
-      window.confirmarRecepcion = async function(idAlerta) {
-        try {
-          const alertaRef = doc(db, "alertas", idAlerta);
-          await updateDoc(alertaRef, {
-            estado: 'Entregado'
-          });
-          alert("¡Gracias por confirmar! La trazabilidad se ha completado.");
-        } catch (error) {
-          console.error("Error al confirmar:", error);
-        }
-      };
-
-      document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
-        signOut(auth).then(() => { window.location.href = "index.html"; });
-      });
+      document.getElementById('btn-cerrar-sesion').addEventListener('click', () => { signOut(auth).then(() => { window.location.href = "index.html"; }); });
     </script>
-  </body>
-</html>
