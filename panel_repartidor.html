@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel de Voluntario - Repartidor</title>
+    <link rel="stylesheet" href="assets/css/bulma.min.css" />
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <style>
+      .bg-base { background-color: #FFBDB0 !important; }
+      .texto-rojo { color: #A31F05 !important; }
+      .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+      #panel-content { display: none; }
+    </style>
+  </head>
+  <body class="bg-base">
+    
+    <!-- Navbar -->
+    <nav class="navbar is-white" style="border-radius: 0 0 15px 15px; margin-bottom: 2rem; padding: 0.5rem 2rem;">
+      <div class="navbar-brand">
+        <a class="navbar-item texto-rojo has-text-weight-bold is-size-4" href="index.html">
+          <i class="fa-solid fa-car-side mr-2"></i> Inicio
+        </a>
+      </div>
+      <div class="navbar-menu is-active" style="background: transparent; box-shadow: none;">
+        <div class="navbar-end">
+          <div class="navbar-item">
+            <span class="tag is-light is-medium mr-4 texto-rojo">Perfil: Voluntario/Repartidor</span>
+            <button id="btn-cerrar-sesion" class="button is-danger is-outlined">
+              <i class="fa-solid fa-right-from-bracket mr-2"></i> Salir
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <section class="section pt-0" id="panel-content">
+      <div class="container">
+        
+        <div class="columns is-vcentered mb-5">
+          <div class="column is-8">
+            <h1 class="title texto-rojo">
+              ¡Qué onda! <span id="user-email" class="is-size-4 has-text-weight-normal"></span>
+            </h1>
+          </div>
+          <div class="column is-4 has-text-right">
+            <!-- Estadística de motivación -->
+            <span class="tag is-success is-large">
+              <i class="fa-solid fa-medal mr-2"></i> 12 Viajes Completados
+            </span>
+          </div>
+        </div>
+
+        <div class="columns is-variable is-6">
+          
+          <!-- Mapa de Rutas Disponibles -->
+          <div class="column is-6">
+            <div class="box p-5" style="height: 100%;">
+              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-map-location mr-2"></i> Viajes Disponibles</h2>
+              <p class="mb-4 has-text-grey is-size-7">Rutas cercanas que necesitan un conductor con auto disponible.</p>
+              
+              <!-- Ejemplo de Ruta Disponible 1 -->
+              <div class="box mb-4" style="border: 2px dashed #3298dc; background-color: #f5faff;">
+                <div class="columns is-mobile is-vcentered">
+                  <div class="column is-8">
+                    <p class="has-text-weight-bold is-size-5">2 Cajas (15kg aprox)</p>
+                    <p class="is-size-7 has-text-grey mt-2">
+                      <strong class="texto-rojo">A:</strong> Súper Mercado Centro<br>
+                      <strong class="has-text-info">B:</strong> Comedor La Esperanza
+                    </p>
+                  </div>
+                  <div class="column is-4 has-text-right">
+                    <span class="tag is-info is-light mb-2"><i class="fa-solid fa-route mr-1"></i> 5.2 km</span><br>
+                    <button class="button is-info is-small" onclick="alert('¡Viaje aceptado! Dirígete al supermercado.')">
+                      <strong>Aceptar Viaje</strong>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Controles del Viaje Activo -->
+          <div class="column is-6">
+            <div class="box p-5" style="height: 100%; background-color: #fcfcfc;">
+              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-steering-wheel mr-2"></i> Tu Viaje Actual</h2>
+              <p class="mb-4 has-text-grey is-size-7">Controles para tu ruta en curso.</p>
+              
+              <!-- Simulación de un viaje activo (En camino al súper) -->
+              <div class="box mb-3" style="border-left: 5px solid #ffdd57;">
+                <p class="has-text-weight-bold mb-2">3 Cajas de Panadería</p>
+                <p class="is-size-7 has-text-grey mb-4">
+                  <i class="fa-solid fa-location-dot mr-1"></i> Dirígete a: <strong>Súper Tienda Norte</strong>
+                </p>
+                
+                <hr>
+                
+                <!-- Filtro de Seguridad -->
+                <p class="is-size-7 has-text-weight-bold mb-2">Validación de Recolección (Antirrobo)</p>
+                <div class="field has-addons">
+                  <div class="control is-expanded">
+                    <input class="input is-small" type="text" placeholder="Pídele el PIN al gerente del súper">
+                  </div>
+                  <div class="control">
+                    <button class="button is-warning is-small" onclick="alert('PIN Correcto. ¡Ya puedes llevar la comida al albergue!')">
+                      <strong>Validar</strong>
+                    </button>
+                  </div>
+                </div>
+                
+              </div>
+              
+              <!-- Botón final de entrega -->
+              <button class="button is-success is-fullwidth is-outlined mt-4" disabled>
+                <i class="fa-solid fa-check mr-2"></i> Marcar como Entregado en el Albergue
+              </button>
+              <p class="is-size-7 has-text-centered has-text-grey mt-2">Valida el PIN de recolección para habilitar la entrega.</p>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Script de Firebase -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
+        authDomain: "bd-concurso.firebaseapp.com",
+        projectId: "bd-concurso",
+        storageBucket: "bd-concurso.firebasestorage.app",
+        messagingSenderId: "944372990629",
+        appId: "1:944372990629:web:1bd61c44cf1274eadc034c",
+        measurementId: "G-LMSMQBD5CL"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          document.getElementById('panel-content').style.display = 'block';
+          document.getElementById('user-email').innerText = user.email;
+        } else {
+          window.location.href = "login.html";
+        }
+      });
+
+      document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
+        signOut(auth).then(() => {
+          window.location.href = "index.html";
+        });
+      });
+    </script>
+  </body>
+</html>
