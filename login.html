@@ -39,7 +39,7 @@
                     </div>
                   </div>
 
-                  <div id="login-message" class="has-text-centered mb-3"></div>
+                  <div id="login-message" class="has-text-centered mb-3 mt-4"></div>
 
                   <div class="field mt-5">
                     <button type="submit" class="button is-primary is-fullwidth"><strong>Entrar</strong></button>
@@ -64,6 +64,8 @@
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
       import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      // IMPORTAMOS FIRESTORE PARA LEER EL ROL
+      import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
@@ -77,6 +79,7 @@
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
+      const db = getFirestore(app);
 
       document.getElementById('login-form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -87,12 +90,44 @@
         msgDiv.innerHTML = "<p class='has-text-info'>Iniciando sesión...</p>";
 
         signInWithEmailAndPassword(auth, email, password)
-          .then((userCredential) => {
-            msgDiv.innerHTML = "<p class='has-text-success has-text-weight-bold'>¡Bienvenido! Entrando...</p>";
-            setTimeout(() => { window.location.href = "index.html"; }, 1500);
+          .then(async (userCredential) => {
+            msgDiv.innerHTML = "<p class='has-text-info'>Verificando tu tipo de cuenta...</p>";
+            
+            const user = userCredential.user;
+            
+            try {
+              // BUSCAMOS AL USUARIO EN LA BASE DE DATOS
+              const docRef = doc(db, "usuarios", user.uid);
+              const docSnap = await getDoc(docRef);
+
+              if (docSnap.exists()) {
+                const rol = docSnap.data().rol;
+                msgDiv.innerHTML = "<p class='has-text-success has-text-weight-bold'>¡Bienvenido! Cargando tu panel...</p>";
+                
+                // REDIRECCIÓN INTELIGENTE DEPENDIENDO DEL ROL
+                setTimeout(() => {
+                  if (rol === 'donador') {
+                    window.location.href = "panel_donador.html";
+                  } else if (rol === 'receptor') {
+                    window.location.href = "panel_receptor.html";
+                  } else if (rol === 'repartidor') {
+                    window.location.href = "panel_repartidor.html";
+                  } else {
+                    // Por si acaso alguien no tiene rol
+                    window.location.href = "index.html"; 
+                  }
+                }, 1500);
+
+              } else {
+                msgDiv.innerHTML = "<p class='has-text-warning'>Cuenta sin rol asignado.</p>";
+                setTimeout(() => { window.location.href = "index.html"; }, 1500);
+              }
+            } catch (error) {
+              console.error("Error al obtener el rol:", error);
+              msgDiv.innerHTML = "<p class='has-text-danger'>Hubo un problema al cargar tus datos.</p>";
+            }
           })
           .catch((error) => {
-            // Un mensaje más amigable si se equivocan de clave
             if(error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password'){
                msgDiv.innerHTML = `<p class='has-text-danger'>Correo o contraseña incorrectos.</p>`;
             } else {
