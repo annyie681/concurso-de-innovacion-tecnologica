@@ -8,16 +8,9 @@
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
     <style>
-      .bg-base {
-        background-color: #FFBDB0 !important;
-      }
-      .texto-rojo {
-        color: #A31F05 !important;
-      }
-      .box {
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      }
+      .bg-base { background-color: #FFBDB0 !important; }
+      .texto-rojo { color: #A31F05 !important; }
+      .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     </style>
   </head>
   <body>
@@ -29,33 +22,28 @@
               <div class="box p-6">
                 <h1 class="title has-text-centered texto-rojo mb-5">Crear cuenta</h1>
                 
-                <form>
-                  <div class="field">
-                    <label class="label">Nombre completo</label>
-                    <div class="control has-icons-left">
-                      <input class="input" type="text" placeholder="Ej. Juan Pérez">
-                      <span class="icon is-small is-left"><i class="fa-solid fa-user"></i></span>
-                    </div>
-                  </div>
-
+                <form id="signup-form">
                   <div class="field">
                     <label class="label">Correo electrónico</label>
                     <div class="control has-icons-left">
-                      <input class="input" type="email" placeholder="ejemplo@correo.com">
+                      <input class="input" type="email" id="signup-email" placeholder="ejemplo@correo.com" required>
                       <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
                     </div>
                   </div>
 
                   <div class="field">
-                    <label class="label">Contraseña</label>
+                    <label class="label">Contraseña (Mín. 6 letras)</label>
                     <div class="control has-icons-left">
-                      <input class="input" type="password" placeholder="********">
+                      <input class="input" type="password" id="signup-password" placeholder="********" required>
                       <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
                     </div>
                   </div>
 
+                  <!-- Aquí aparecerán los mensajes de error o éxito -->
+                  <div id="signup-message" class="has-text-centered mb-3"></div>
+
                   <div class="field mt-5">
-                    <button class="button is-info is-fullwidth"><strong>Registrarme</strong></button>
+                    <button type="submit" class="button is-info is-fullwidth"><strong>Registrarme</strong></button>
                   </div>
                 </form>
 
@@ -72,5 +60,47 @@
         </div>
       </div>
     </section>
+
+    <!-- Scripts de Firebase -->
+    <script type="module">
+      // Importar Firebase
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+      // Tu configuración
+      const firebaseConfig = {
+        apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
+        authDomain: "bd-concurso.firebaseapp.com",
+        projectId: "bd-concurso",
+        storageBucket: "bd-concurso.firebasestorage.app",
+        messagingSenderId: "944372990629",
+        appId: "1:944372990629:web:1bd61c44cf1274eadc034c",
+        measurementId: "G-LMSMQBD5CL"
+      };
+
+      // Inicializar Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      // Manejar el formulario
+      document.getElementById('signup-form').addEventListener('submit', (e) => {
+        e.preventDefault(); // Evita que la página recargue
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const msgDiv = document.getElementById('signup-message');
+
+        msgDiv.innerHTML = "<p class='has-text-info'>Registrando...</p>";
+
+        createUserWithEmailAndPassword(auth, email, password)
+          .then((userCredential) => {
+            msgDiv.innerHTML = "<p class='has-text-success has-text-weight-bold'>¡Cuenta creada con éxito! Llevándote al inicio...</p>";
+            // Esperar 2 segundos y redirigir
+            setTimeout(() => { window.location.href = "index.html"; }, 2000);
+          })
+          .catch((error) => {
+            msgDiv.innerHTML = `<p class='has-text-danger'>Error: ${error.message}</p>`;
+          });
+      });
+    </script>
   </body>
 </html>
