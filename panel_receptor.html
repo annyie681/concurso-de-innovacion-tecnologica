@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel de Albergue - Receptor</title>
+    <link rel="stylesheet" href="assets/css/bulma.min.css" />
+    <link rel="stylesheet" href="assets/css/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <style>
+      .bg-base { background-color: #FFBDB0 !important; }
+      .texto-rojo { color: #A31F05 !important; }
+      .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+      #panel-content { display: none; }
+    </style>
+  </head>
+  <body class="bg-base">
+    
+    <!-- Navbar -->
+    <nav class="navbar is-white" style="border-radius: 0 0 15px 15px; margin-bottom: 2rem; padding: 0.5rem 2rem;">
+      <div class="navbar-brand">
+        <a class="navbar-item texto-rojo has-text-weight-bold is-size-4" href="index.html">
+          <i class="fa-solid fa-house-chimney-window mr-2"></i> Inicio
+        </a>
+      </div>
+      <div class="navbar-menu is-active" style="background: transparent; box-shadow: none;">
+        <div class="navbar-end">
+          <div class="navbar-item">
+            <span class="tag is-light is-medium mr-4 texto-rojo">Perfil: Albergue/Receptor</span>
+            <button id="btn-cerrar-sesion" class="button is-danger is-outlined">
+              <i class="fa-solid fa-right-from-bracket mr-2"></i> Salir
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <section class="section pt-0" id="panel-content">
+      <div class="container">
+        
+        <h1 class="title texto-rojo mb-6">
+          ¡Qué onda! <span id="user-email" class="is-size-4 has-text-weight-normal"></span>
+        </h1>
+
+        <div class="columns is-variable is-6">
+          
+          <!-- Radar de Donaciones Disponibles -->
+          <div class="column is-6">
+            <div class="box p-5" style="height: 100%;">
+              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-satellite-dish mr-2"></i> Radar de Donaciones</h2>
+              <p class="mb-4 has-text-grey is-size-7">Alimentos disponibles cerca de ti. Acepta solo lo que puedas aprovechar.</p>
+              
+              <!-- Ejemplo de Alerta Disponible 1 -->
+              <div class="box mb-4" style="border: 2px dashed #ffdd57; background-color: #fffdf5;">
+                <div class="columns is-mobile is-vcentered">
+                  <div class="column is-8">
+                    <p class="has-text-weight-bold is-size-5">20kg de Fruta Mixta</p>
+                    <p class="is-size-7 has-text-grey"><i class="fa-solid fa-shop mr-1"></i> Súper Mercado Centro</p>
+                    <p class="is-size-7 has-text-danger mt-1"><i class="fa-solid fa-clock mr-1"></i> Vence en 48 horas</p>
+                  </div>
+                  <div class="column is-4 has-text-right">
+                    <span class="tag is-warning is-light mb-2"><i class="fa-solid fa-location-dot mr-1"></i> a 2.5 km</span><br>
+                    <button class="button is-info is-small" onclick="alert('¡Donación aceptada! Buscando voluntario para el traslado.')">
+                      <strong>Reclamar</strong>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ejemplo de Alerta Disponible 2 -->
+              <div class="box mb-4" style="border: 2px dashed #ffdd57; background-color: #fffdf5;">
+                <div class="columns is-mobile is-vcentered">
+                  <div class="column is-8">
+                    <p class="has-text-weight-bold is-size-5">10kg de Carnes frías</p>
+                    <p class="is-size-7 has-text-grey"><i class="fa-solid fa-shop mr-1"></i> Tienda Norte</p>
+                    <p class="is-size-7 has-text-danger mt-1"><i class="fa-solid fa-clock mr-1"></i> Vence en 24 horas</p>
+                  </div>
+                  <div class="column is-4 has-text-right">
+                    <span class="tag is-warning is-light mb-2"><i class="fa-solid fa-location-dot mr-1"></i> a 5.1 km</span><br>
+                    <button class="button is-info is-small" onclick="alert('¡Donación aceptada! Buscando voluntario para el traslado.')">
+                      <strong>Reclamar</strong>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Monitor de Entregas en Camino -->
+          <div class="column is-6">
+            <div class="box p-5" style="height: 100%; background-color: #fcfcfc;">
+              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-map-location-dot mr-2"></i> Entregas en Camino</h2>
+              <p class="mb-4 has-text-grey is-size-7">Rastrea a los voluntarios que se dirigen hacia tu ubicación.</p>
+              
+              <!-- Ejemplo de entrega en ruta -->
+              <div class="box mb-3" style="border-left: 5px solid #48c774;">
+                <div class="columns is-vcentered">
+                  <div class="column is-7">
+                    <p class="has-text-weight-bold">3 Cajas de Panadería</p>
+                    <p class="is-size-7 has-text-grey mt-1">
+                      <i class="fa-solid fa-circle-user mr-1"></i> Voluntario: Ana López<br>
+                      <i class="fa-solid fa-car mr-1"></i> Honda Civic Blanco (ABC-123)
+                    </p>
+                  </div>
+                  <div class="column is-5 has-text-right">
+                    <span class="tag is-success mb-2"><i class="fa-solid fa-stopwatch mr-1"></i> Llega en 15 min</span>
+                    <br>
+                    <button class="button is-primary is-small is-outlined mt-2" onclick="alert('¡Acuse de recibo generado! La cadena de trazabilidad se ha completado con éxito.')">
+                      <i class="fa-solid fa-check-double mr-1"></i> Confirmar Recepción
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notificación de vacío (por si no hay entregas) -->
+              <div class="notification is-light is-size-7 mt-5">
+                <i class="fa-solid fa-circle-info mr-2"></i> Cuando reclames una donación y un voluntario la recoja, aparecerá aquí su tiempo de llegada.
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Script de Firebase -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
+        authDomain: "bd-concurso.firebaseapp.com",
+        projectId: "bd-concurso",
+        storageBucket: "bd-concurso.firebasestorage.app",
+        messagingSenderId: "944372990629",
+        appId: "1:944372990629:web:1bd61c44cf1274eadc034c",
+        measurementId: "G-LMSMQBD5CL"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          document.getElementById('panel-content').style.display = 'block';
+          document.getElementById('user-email').innerText = user.email;
+        } else {
+          window.location.href = "login.html";
+        }
+      });
+
+      document.getElementById('btn-cerrar-sesion').addEventListener('click', () => {
+        signOut(auth).then(() => {
+          window.location.href = "index.html";
+        });
+      });
+    </script>
+  </body>
+</html>
