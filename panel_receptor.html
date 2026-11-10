@@ -28,6 +28,10 @@
         background-color: #A31F05 !important;
         color: white !important;
       }
+      .btn-verde {
+        background-color: #2D4F00 !important;
+        color: white !important;
+      }
     </style>
   </head>
   <body>
@@ -85,7 +89,7 @@
                   class="input"
                   type="text"
                   id="direccion-albergue"
-                  placeholder="Escribe aquí la dirección de entrega de tu Albergue / Comedor..."
+                  placeholder="Escribe aquí la dirección de tu Albergue / Comedor..."
                 />
               </div>
               <div class="column is-4">
@@ -95,7 +99,7 @@
               </div>
             </div>
             <p id="aviso-gps-albergue" class="help has-text-grey">
-              Ingresa tu dirección arriba antes de solicitar un lote para que el voluntario sepa a dónde llevarlo.
+              Ingresa tu dirección arriba. Puedes pasar tú mismo por la donación o pedir que un voluntario verificado te la lleve.
             </p>
           </div>
 
@@ -112,11 +116,11 @@
               </div>
             </div>
 
-            <!-- Lotes solicitados por mi albergue -->
+            <!-- Lotes solicitados por mi albergue + Código Antifraude -->
             <div class="column is-6">
               <div class="box">
                 <h3 class="title is-5 titulo-verde">
-                  <i class="fa-solid fa-clipboard-check mr-2"></i> Donaciones Solicitadas por mi Albergue
+                  <i class="fa-solid fa-shield-halved mr-2"></i> Mis Donaciones y Códigos de Recepción
                 </h3>
                 <div id="lista-solicitadas">
                   <p class="has-text-grey">Aún no has solicitado lotes.</p>
@@ -176,7 +180,6 @@
 
         usuarioActual = user;
 
-        // 1. CANDADO OBLIGATORIO DE CORREO VERIFICADO
         if (!user.emailVerified) {
           bloqueoCorreo.classList.remove("is-hidden");
           contenidoPanel.classList.add("is-hidden");
@@ -184,7 +187,6 @@
           return;
         }
 
-        // 2. Validar rol de receptor
         const docSnap = await getDoc(doc(db, "usuarios", user.uid));
         if (!docSnap.exists() || docSnap.data().rol !== "receptor") {
           alert("No tienes permisos de Albergue (Receptor).");
@@ -229,28 +231,70 @@
         });
       });
 
-      window.solicitarLote = async (donacionId) => {
+      // Genera un código único antifraude de 4 dígitos/letras tipo ENT-8492
+      function generarPinAntifraude() {
+        const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+        let pin = "";
+        for (let i = 0; i < 4; i++) {
+          pin += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return `ENT-${pin}`;
+      }
+
+      // Opción 2A: El albergue decide ir directamente por la donación
+      window.recogerDirectamente = async (donacionId) => {
+        const direccionDestino = document.getElementById("direccion-albergue").value.trim() || "Recolección directa en sucursal";
+        const pinSecreto = generarPinAntifraude();
+
+        await updateDoc(doc(db, "donaciones", donacionId), {
+          estado: "recoge_albergue",
+          modalidadEntrega: "Recolección directa por Albergue",
+          albergueId: usuarioActual.uid,
+          albergueNombre: datosAlbergue.nombre || usuarioActual.email,
+          direccionDestino: direccionDestino,
+          coordsDestino: coordsAlbergue,
+          codigoEntrega: pinSecreto,
+          fechaSolicitud: new Date().toISOString()
+        });
+      };
+
+      // Opción 2B: El albergue NO puede ir y envía la solicitud a los Voluntarios YA verificados
+      window.pedirVoluntarioVerificado = async (donacionId) => {
         const direccionDestino = document.getElementById("direccion-albergue").value.trim();
         if (!direccionDestino) {
-          alert("Por favor escribe arriba la dirección de tu Albergue para que el voluntario sepa a dónde llevar la donación.");
+          alert("Por favor escribe arriba la dirección de tu Albergue para que el voluntario verificado sepa a dónde llevártela.");
+          document.getElementById("direccion-albergue").focus();
+          return;
+        }
+
+        const pinSecreto = generarPinAntifraude();
+
+        await updateDoc(doc(db, "donaciones", donacionId), {
+          estado: "solicitada", // Aparece en el panel de los voluntarios verificados
+          modalidadEntrega: "Solicitado a Voluntarios Verificados",
+          albergueId: usuarioActual.uid,
+          albergueNombre: datosAlbergue.nombre || usuarioActual.email,
+          direccionDestino: direccionDestino,
+          coordsDestino: coordsAlbergue,
+          codigoEntrega: pinSecreto,
+          fechaSolicitud: new Date().toISOString()
+        });
+      };
+
+      // Si el albergue iba a ir pero tuvo un imprevisto, puede delegarlo a un voluntario verificado
+      window.cambiarAVoluntario = async (donacionId) => {
+        const direccionDestino = document.getElementById("direccion-albergue").value.trim();
+        if (!direccionDestino) {
+          alert("Escribe primero arriba la dirección de entrega de tu Albergue antes de pedir un voluntario.");
           document.getElementById("direccion-albergue").focus();
           return;
         }
 
         await updateDoc(doc(db, "donaciones", donacionId), {
           estado: "solicitada",
-          albergueId: usuarioActual.uid,
-          albergueNombre: datosAlbergue.nombre || usuarioActual.email,
+          modalidadEntrega: "Transferido a Voluntarios Verificados",
           direccionDestino: direccionDestino,
-          coordsDestino: coordsAlbergue,
-          fechaSolicitud: new Date().toISOString()
-        });
-      };
-
-      window.confirmarRecepcionFinal = async (donacionId) => {
-        await updateDoc(doc(db, "donaciones", donacionId), {
-          estado: "entregada",
-          fechaEntrega: new Date().toISOString()
+          coordsDestino: coordsAlbergue
         });
       };
 
@@ -267,39 +311,78 @@
               htmlDisponibles += `
                 <div class="notification is-warning is-light mb-3 p-4">
                   <p class="is-size-5 has-text-weight-bold titulo-verde">${d.producto} (${d.cantidad})</p>
-                  <p class="is-size-6 mb-1"><strong>Supermercado:</strong> ${d.supermercadoNombre} <span class="tag is-white">RFC: ${d.rfcDonador || "Verificado"}</span></p>
-                  <p class="is-size-7 has-text-grey mb-3">
-                    <i class="fa-solid fa-clock mr-1"></i> Vence en: <strong>${d.horasVencer}</strong> |
-                    <i class="fa-solid fa-location-dot ml-1 mr-1"></i> ${d.direccionOrigen}
+                  <p class="is-size-6 mb-1">
+                    <strong>Supermercado:</strong> ${d.supermercadoNombre}
+                    <span class="tag is-white">RFC: ${d.rfcDonador || "Verificado"}</span>
                   </p>
-                  <button class="button btn-rojo is-small is-fullwidth" onclick="solicitarLote('${id}')">
-                    <strong><i class="fa-solid fa-hand-holding-medical mr-1"></i> Solicitar este Lote para mi Albergue</strong>
-                  </button>
+                  <p class="is-size-7 has-text-grey mb-3">
+                    <i class="fa-solid fa-clock mr-1"></i> Tiempo límite: <strong>${d.horasVencer}</strong> |
+                    <i class="fa-solid fa-location-dot ml-1 mr-1"></i> Sucursal: ${d.direccionOrigen}
+                  </p>
+                  <p class="is-size-7 has-text-weight-bold mb-2">¿Cómo deseas recolectar este lote?</p>
+                  <div class="buttons">
+                    <button class="button btn-verde is-small" onclick="recogerDirectamente('${id}')">
+                      <strong><i class="fa-solid fa-person-walking-luggage mr-1"></i> Nosotros pasamos a recogerlo</strong>
+                    </button>
+                    <button class="button btn-rojo is-small" onclick="pedirVoluntarioVerificado('${id}')">
+                      <strong><i class="fa-solid fa-car-side mr-1"></i> No podemos ir: Pedir Voluntario Verificado</strong>
+                    </button>
+                  </div>
                 </div>
               `;
             } else if (d.albergueId === usuarioActual.uid) {
-              let estadoTexto = `<span class="tag is-warning">Esperando voluntario con auto</span>`;
-              let botonConfirmar = "";
+              let estadoTexto = "";
+              let botonExtra = "";
 
-              if (d.estado === "en_camino") {
-                estadoTexto = `<span class="tag is-info">🚗 En camino con: ${d.repartidorNombre}</span>`;
-                botonConfirmar = `
-                  <button class="button is-success is-small is-fullwidth mt-2" onclick="confirmarRecepcionFinal('${id}')">
-                    <strong><i class="fa-solid fa-check mr-1"></i> Confirmar que ya recibimos los alimentos</strong>
-                  </button>
+              if (d.estado === "recoge_albergue") {
+                const origenMapa = d.coordsOrigen
+                  ? `${d.coordsOrigen.lat},${d.coordsOrigen.lng}`
+                  : encodeURIComponent(d.direccionOrigen || "");
+                const urlSucursal = `https://www.google.com/maps/search/?api=1&query=${origenMapa}`;
+
+                estadoTexto = `<span class="tag is-primary">🏢 Recolección directa por nuestro Albergue</span>`;
+                botonExtra = `
+                  <div class="buttons mt-2">
+                    <a href="${urlSucursal}" target="_blank" class="button is-link is-light is-small">
+                      <i class="fa-solid fa-map-location-dot mr-1"></i> Ver ubicación del Súper
+                    </a>
+                    <button class="button is-warning is-light is-small" onclick="cambiarAVoluntario('${id}')">
+                      <i class="fa-solid fa-car mr-1"></i> ¿No puedes ir? Enviar solicitud a Voluntarios Verificados
+                    </button>
+                  </div>
                 `;
+              } else if (d.estado === "solicitada") {
+                estadoTexto = `<span class="tag is-warning">📡 Solicitud enviada a Voluntarios Verificados</span>`;
+              } else if (d.estado === "en_camino") {
+                estadoTexto = `<span class="tag is-info">🚗 En camino con voluntario verificado: ${d.repartidorNombre}</span>`;
               } else if (d.estado === "entregada") {
-                estadoTexto = `<span class="tag is-success">✅ Recibido en Albergue</span>`;
+                estadoTexto = `<span class="tag is-success">✅ Entrega Confirmada con Código Antifraude</span>`;
+              }
+
+              // Caja con el Código Secreto de Verificación (Solo se muestra mientras no haya sido entregada)
+              let cajaPinSecreto = "";
+              if (d.estado !== "entregada" && d.codigoEntrega) {
+                cajaPinSecreto = `
+                  <div class="box p-3 mt-3 has-background-white" style="border-left: 4px solid #2D4F00;">
+                    <p class="is-size-7 has-text-grey mb-1">
+                      <i class="fa-solid fa-lock mr-1"></i> <strong>Código Antifraude de Recepción:</strong> (Solo proporciónalo cuando tengas los alimentos frente a ti)
+                    </p>
+                    <p class="title is-4 titulo-verde mb-0" style="letter-spacing: 3px;">${d.codigoEntrega}</p>
+                  </div>
+                `;
               }
 
               htmlSolicitadas += `
                 <div class="notification is-light mb-3 p-4">
-                  <div class="is-flex is-justify-content-space-between is-align-items-center mb-1">
-                    <strong class="titulo-verde">${d.producto} (${d.cantidad})</strong>
+                  <div class="is-flex is-justify-content-space-between is-align-items-center mb-1" style="flex-wrap: wrap; gap: 0.5rem;">
+                    <strong class="titulo-verde is-size-5">${d.producto} (${d.cantidad})</strong>
                     ${estadoTexto}
                   </div>
-                  <p class="is-size-7 has-text-grey">Origen: ${d.supermercadoNombre} (${d.direccionOrigen})</p>
-                  ${botonConfirmar}
+                  <p class="is-size-7 has-text-grey">
+                    Supermercado: <strong>${d.supermercadoNombre}</strong> (${d.direccionOrigen}) | Plazo: ${d.horasVencer}
+                  </p>
+                  ${cajaPinSecreto}
+                  ${botonExtra}
                 </div>
               `;
             }
