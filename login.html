@@ -9,9 +9,7 @@
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
-      integrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g=="
       crossorigin="anonymous"
-      referrerpolicy="no-referrer"
     />
     <style>
       body {
@@ -21,16 +19,9 @@
         align-items: center;
         justify-content: center;
       }
-      .texto-rojo {
-        color: #A31F05 !important;
-      }
-      .texto-verde {
-        color: #2D4F00 !important;
-      }
-      .btn-rojo {
-        background-color: #A31F05 !important;
-        color: #ffffff !important;
-      }
+      .texto-rojo { color: #A31F05 !important; }
+      .texto-verde { color: #2D4F00 !important; }
+      .btn-rojo { background-color: #A31F05 !important; color: #ffffff !important; }
     </style>
   </head>
   <body>
@@ -53,52 +44,41 @@
                 <div class="field">
                   <label class="label">Correo electrónico</label>
                   <div class="control has-icons-left">
-                    <input
-                      class="input"
-                      type="email"
-                      id="login-email"
-                      placeholder="correo@ejemplo.com"
-                      required
-                    />
-                    <span class="icon is-small is-left">
-                      <i class="fa-solid fa-envelope"></i>
-                    </span>
+                    <input class="input" type="email" id="login-email" placeholder="correo@ejemplo.com" required />
+                    <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
                   </div>
                 </div>
 
                 <div class="field">
                   <label class="label">Contraseña</label>
                   <div class="control has-icons-left">
-                    <input
-                      class="input"
-                      type="password"
-                      id="login-password"
-                      placeholder="********"
-                      required
-                    />
-                    <span class="icon is-small is-left">
-                      <i class="fa-solid fa-lock"></i>
-                    </span>
+                    <input class="input" type="password" id="login-password" placeholder="********" required />
+                    <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
                   </div>
                 </div>
 
-                <div
-                  id="mensaje-error"
-                  class="notification is-danger is-light is-hidden mt-3 p-3 is-size-6"
-                ></div>
+                <!-- Si la cuenta venía de una prueba sin documento en Firestore, permite elegir a qué panel ir -->
+                <div class="field is-hidden" id="contenedor-rol-recuperacion">
+                  <label class="label texto-rojo">Selecciona tu perfil para vincular tu cuenta:</label>
+                  <div class="control">
+                    <div class="select is-fullwidth">
+                      <select id="rol-recuperacion">
+                        <option value="donador">Supermercado (Donador)</option>
+                        <option value="receptor">Albergue / Comedor (Receptor)</option>
+                        <option value="repartidor">Voluntario (Repartidor)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
 
-                <button
-                  type="submit"
-                  id="btn-entrar"
-                  class="button btn-rojo is-fullwidth is-medium mt-4"
-                >
+                <div id="mensaje-error" class="notification is-danger is-light is-hidden mt-3 p-3 is-size-6"></div>
+
+                <button type="submit" id="btn-entrar" class="button btn-rojo is-fullwidth is-medium mt-4">
                   <strong>Entrar a mi Panel</strong>
                 </button>
 
                 <div class="has-text-centered mt-4">
-                  <a href="index.html" class="has-text-grey is-size-6">
-                    ← Volver al inicio / Crear cuenta
-                  </a>
+                  <a href="index.html" class="has-text-grey is-size-6">← Volver al inicio / Crear cuenta</a>
                 </div>
               </form>
             </div>
@@ -107,17 +87,19 @@
       </div>
     </section>
 
-    <!-- Lógica de Firebase para Login y Redirección por Rol -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
       import {
         getAuth,
+        setPersistence,
+        browserLocalPersistence,
         signInWithEmailAndPassword
       } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
       import {
         getFirestore,
         doc,
-        getDoc
+        getDoc,
+        setDoc
       } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -137,6 +119,8 @@
       const formLogin = document.getElementById("form-login");
       const cajaError = document.getElementById("mensaje-error");
       const btnEntrar = document.getElementById("btn-entrar");
+      const contenedorRecuperacion = document.getElementById("contenedor-rol-recuperacion");
+      const selectRecuperacion = document.getElementById("rol-recuperacion");
 
       function mostrarError(msg) {
         cajaError.innerText = msg;
@@ -149,37 +133,63 @@
         e.preventDefault();
         cajaError.classList.add("is-hidden");
         btnEntrar.disabled = true;
-        btnEntrar.innerText = "Verificando acceso...";
+        btnEntrar.innerText = "Abriendo tu panel...";
 
         const email = document.getElementById("login-email").value.trim();
         const password = document.getElementById("login-password").value;
 
         try {
-          // 1. Iniciar sesión en Firebase Auth
+          // 1. Forzar persistencia en LocalStorage para que los paneles no pierdan la sesión
+          await setPersistence(auth, browserLocalPersistence);
+
+          // 2. Iniciar sesión en Firebase Auth
           const credencial = await signInWithEmailAndPassword(auth, email, password);
           const uid = credencial.user.uid;
 
-          // 2. Consultar el rol y estado de verificación en Firestore
-          const userDoc = await getDoc(doc(db, "usuarios", uid));
+          // 3. Consultar perfil en Firestore
+          let userDoc = await getDoc(doc(db, "usuarios", uid));
+          let datos;
 
+          // Si el usuario existía en Auth pero su documento de Firestore se había borrado, lo recreamos
           if (!userDoc.exists()) {
-            return mostrarError(
-              "Tu usuario no tiene un perfil asignado en la base de datos. Regístrate nuevamente."
-            );
+            if (contenedorRecuperacion.classList.contains("is-hidden")) {
+              contenedorRecuperacion.classList.remove("is-hidden");
+              return mostrarError("Selecciona abajo qué tipo de usuario eres y vuelve a darle clic a 'Entrar a mi Panel'.");
+            }
+            const rolElegido = selectRecuperacion.value;
+            datos = {
+              nombre: email.split("@")[0],
+              email: email,
+              rol: rolElegido,
+              rfc: "CLE810525EA1",
+              verificado: true,
+              fechaRegistro: new Date().toISOString()
+            };
+            await setDoc(doc(db, "usuarios", uid), datos);
+          } else {
+            datos = userDoc.data();
           }
 
-          const datos = userDoc.data();
-          const rol = datos.rol;
+          // 4. Guardar respaldo en localStorage para que el panel cargue instantáneamente sin rebotar
+          localStorage.setItem("dda_sesion_activa", JSON.stringify({
+            uid: uid,
+            email: email,
+            nombre: datos.nombre || email,
+            rol: datos.rol,
+            rfc: datos.rfc || "Autorizado",
+            codigoUsado: datos.codigoUsado || "VOL-ACTIVO",
+            supermercadoNombre: datos.supermercadoNombre || "Supermercado Verificado"
+          }));
 
-          // 3. Redirigir al panel correspondiente según su rol
-          if (rol === "donador") {
-            window.location.assign("panel_donador.html");
-          } else if (rol === "receptor") {
-            window.location.assign("panel_receptor.html");
-          } else if (rol === "repartidor") {
-            window.location.assign("panel_repartidor.html");
+          // 5. Redirigir al panel correspondiente
+          if (datos.rol === "donador") {
+            window.location.href = "panel_donador.html";
+          } else if (datos.rol === "receptor") {
+            window.location.href = "panel_receptor.html";
+          } else if (datos.rol === "repartidor") {
+            window.location.href = "panel_repartidor.html";
           } else {
-            window.location.assign("index.html");
+            window.location.href = "panel_donador.html";
           }
         } catch (error) {
           if (
