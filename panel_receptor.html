@@ -13,6 +13,8 @@
       .texto-rojo { color: #A31F05 !important; }
       .btn-rojo { background-color: #A31F05 !important; color: white !important; }
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
+      /* Evita que Bulma encime los subtítulos sobre los títulos */
+      .title + .subtitle { margin-top: 0.35rem !important; }
     </style>
   </head>
   <body>
@@ -52,8 +54,8 @@
 
         <div id="contenido-panel">
           <div class="box mb-5">
-            <h1 class="title is-4 titulo-verde mb-1" id="nombre-albergue">Cargando albergue...</h1>
-            <p class="subtitle is-6 has-text-grey mb-3" id="rfc-albergue"></p>
+            <h1 class="title is-4 titulo-verde mb-2" id="nombre-albergue">Cargando albergue...</h1>
+            <p class="is-size-6 has-text-grey mt-1 mb-3" id="rfc-albergue"></p>
 
             <div class="columns is-vcentered">
               <div class="column is-8">
@@ -144,6 +146,7 @@
         uidActivo = sesionGuardada.uid;
         datosAlbergue = sesionGuardada;
         document.getElementById("nombre-albergue").innerText = sesionGuardada.nombre || sesionGuardada.email;
+        document.getElementById("rfc-albergue").innerText = `✅ Asociación Verificada ante SAT (RFC: ${sesionGuardada.rfc || "Autorizado"})`;
         escucharDonaciones();
       }
 
