@@ -57,10 +57,10 @@
                 Fundación DDA
               </p>
               <p class="title texto-rojo has-text-weight-bold is-size-3">
-                72 horas de Donaciones
+                Donaciones Flexibles: De 72 Horas a 2 Semanas
               </p>
               <p class="subtitle texto-rojo is-size-6 mt-3">
-                Únete a nuestro objetivo de reducir desechos de alimentos y ayudar a las comunidades.
+                Únete a nuestra red verificada contra el desperdicio de alimentos: conectamos supermercados, albergues y voluntarios autorizados con trazabilidad antifraude.
               </p>
               
               <div class="buttons" id="botones-visitante">
@@ -250,8 +250,7 @@
           <div class="column mr-6">
             <h4 class="title">Paso <span class="blurple">#1</span></h4>
             <p class="subtitle mt-3">
-              Emitir alertas automáticas a las organizaciones sociales en cuanto 
-              un lote de comida está a 3 días (72 horas) de vencer en un supermercado.
+              Emitir alertas a las organizaciones sociales verificadas cuando un lote de alimentos está próximo a vencer, con la flexibilidad de extender el plazo desde 72 horas hasta 2 semanas.
             </p>
           </div>
           <div class="column" data-aos="fade-left">
@@ -282,8 +281,7 @@
               Paso <span class="has-text-primary">#2</span>
             </h4>
             <p class="subtitle mt-3">
-              Conectar el inventario de los comercios con los albergues para 
-              que la recolección sea lo más cercana y rápida posible.
+              Permitir que los albergues recojan directamente la donación en sucursal o, si no cuentan con transporte, envíen la solicitud de recogida a los voluntarios verificados.
             </p>
           </div>
         </div>
@@ -298,8 +296,7 @@
               Paso <span class="has-text-warning">#3</span>
             </h4>
             <p class="subtitle mt-3">
-              Controlar la trazabilidad de los alimentos para garantizar 
-              que lleguen a su destino y no se desvíen o roben.
+              Blindar la trazabilidad mediante validación de RFC y un código único de recepción en el albergue para confirmar que la entrega llegó completa y sin fraude.
             </p>
           </div>
           <div class="column" data-aos="fade-left">
@@ -328,8 +325,7 @@
           <div class="column">
             <h4 class="title">Paso <span class="has-text-info">#4</span></h4>
             <p class="subtitle mt-3">
-              Gestionar una red logística de voluntarios con automóvil 
-              para facilitar el transporte desde el súper hasta el comedor.
+              Coordinar una red logística de voluntarios autorizados por los supermercados mediante códigos aleatorios de un solo uso para llevar la comida hasta el comedor.
             </p>
           </div>
         </div>
@@ -346,7 +342,7 @@
             ¿Gustas <span class="blurple">participar</span>?
           </p>
           <p class="subtitle mt-3 has-text-gray">
-            ¡Únete a nuestra magia! Y crea una cuenta con nosotros.
+            ¡Únete a nuestra magia! Y crea una cuenta verificada con nosotros.
           </p>
           <a href="#" id="btn-empezar-abajo" class="button is-blurple is-medium"
             ><strong><i class="fa-solid fa-arrow-up"></i> Empezar</strong></a
@@ -431,7 +427,7 @@
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
-      auth.languageCode = "es"; // Para que el correo de verificación llegue en español
+      auth.languageCode = "es";
       const db = getFirestore(app);
 
       let registrandoUsuario = false;
@@ -444,7 +440,7 @@
       }
 
       // =========================================================================
-      // 1. FUNCIÓN consultarRFCEnSAT (Acepta cualquier RFC nuevo válido del SAT)
+      // 1. FUNCIÓN consultarRFCEnSAT (Acepta cualquier RFC válido del SAT)
       // =========================================================================
       const FACTURAPI_KEY = "TU_API_KEY_DE_FACTURAPI";
 
@@ -589,7 +585,6 @@
                 detalleVerificacion.innerText = `🚗 Voluntario autorizado por: ${datos.supermercadoNombre || datos.codigoUsado}`;
               }
 
-              // Revisa si ya verificó su correo electrónico haciendo clic en el enlace
               if (!user.emailVerified) {
                 avisoCorreoPendiente.style.display = "block";
                 btnIrPanel.style.display = "none";
@@ -743,16 +738,13 @@
         try {
           registrandoUsuario = true;
 
-          // A) Si es Supermercado o Albergue -> Analizar RFC
+          // A) Si es Supermercado o Albergue -> Analizar RFC (permite distintas sucursales de la misma cadena)
           if (rol === "donador" || rol === "receptor") {
             const validacion = await analizarRFCCompleto(rfc, nombre, rol);
             if (!validacion.valido) {
               registrandoUsuario = false;
               return mostrarErrorRegistro(validacion.error);
             }
-
-            
-
             datosExtra = { rfc: rfc, verificado: true };
           }
 
@@ -795,16 +787,7 @@
           // D) Enviar el correo real de verificación a la bandeja del usuario
           await sendEmailVerification(credencial.user);
 
-          // E) Guardar datos en Firestore
-          if (rol === "donador" || rol === "receptor") {
-            await setDoc(doc(db, "rfcs_registrados", rfc), {
-              uid: credencial.user.uid,
-              razonSocial: nombre,
-              rol: rol,
-              fecha: new Date().toISOString()
-            });
-          }
-
+          // E) Guardar perfil en Firestore
           await setDoc(doc(db, "usuarios", credencial.user.uid), {
             nombre: nombre,
             email: email,
@@ -838,7 +821,7 @@
         btnComprobarVerificacion.innerText = "Comprobando verificación...";
 
         if (auth.currentUser) {
-          await auth.currentUser.reload(); // Actualiza el estado desde Firebase
+          await auth.currentUser.reload();
           if (auth.currentUser.emailVerified) {
             redirigirPorRol(rolPendienteRedireccion);
             return;
