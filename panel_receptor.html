@@ -144,7 +144,6 @@
         uidActivo = sesionGuardada.uid;
         datosAlbergue = sesionGuardada;
         document.getElementById("nombre-albergue").innerText = sesionGuardada.nombre || sesionGuardada.email;
-        document.getElementById("rfc-albergue").innerText = `✅ Asociación Verificada ante SAT (RFC: ${sesionGuardada.rfc || "Autorizado"})`;
         escucharDonaciones();
       }
 
