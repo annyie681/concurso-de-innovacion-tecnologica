@@ -34,7 +34,7 @@
     <nav class="navbar navbar-custom px-4 py-2">
       <div class="navbar-brand">
         <a class="navbar-item has-text-white has-text-weight-bold is-size-4" href="index.html">
-          <i class="fa-solid fa-car-side mr-2"></i> Panel Voluntario Logístico
+          <i class="fa-solid fa-car-side mr-2"></i> Panel Voluntario Verificado
         </a>
       </div>
       <div class="navbar-end">
@@ -81,23 +81,23 @@
           </div>
 
           <div class="columns">
-            <!-- Columna Izquierda: Traslados listos para recolectar -->
+            <!-- Columna Izquierda: Solicitudes enviadas por Albergues que no pueden ir -->
             <div class="column is-6">
               <div class="box">
                 <h3 class="title is-5 texto-rojo">
-                  <i class="fa-solid fa-route mr-2"></i> Recolecciones Pendientes (Súper → Albergue)
+                  <i class="fa-solid fa-route mr-2"></i> Solicitudes de Albergues (Recogida Pendiente)
                 </h3>
                 <div id="lista-pendientes">
-                  <p class="has-text-grey">Buscando recolecciones pendientes...</p>
+                  <p class="has-text-grey">Buscando solicitudes de recogida...</p>
                 </div>
               </div>
             </div>
 
-            <!-- Columna Derecha: Mis entregas activas y completadas -->
+            <!-- Columna Derecha: Mis entregas y Verificación de Código Antifraude -->
             <div class="column is-6">
               <div class="box">
                 <h3 class="title is-5 titulo-verde">
-                  <i class="fa-solid fa-truck-ramp-box mr-2"></i> Mis Entregas Asignadas
+                  <i class="fa-solid fa-shield-check mr-2"></i> Mis Entregas y Confirmación Antifraude
                 </h3>
                 <div id="lista-mis-viajes">
                   <p class="has-text-grey">Aún no has tomado ningún traslado.</p>
@@ -156,7 +156,6 @@
 
         usuarioActual = user;
 
-        // 1. CANDADO OBLIGATORIO DE CORREO VERIFICADO
         if (!user.emailVerified) {
           bloqueoCorreo.classList.remove("is-hidden");
           contenidoPanel.classList.add("is-hidden");
@@ -164,10 +163,10 @@
           return;
         }
 
-        // 2. Validar rol de repartidor
+        // CANDADO ESTRICTO: Solo voluntarios ya verificados con código de supermercado pueden entrar
         const docSnap = await getDoc(doc(db, "usuarios", user.uid));
-        if (!docSnap.exists() || docSnap.data().rol !== "repartidor") {
-          alert("No tienes permisos de Voluntario (Repartidor).");
+        if (!docSnap.exists() || docSnap.data().rol !== "repartidor" || !docSnap.data().verificado) {
+          alert("Acceso restringido únicamente a Voluntarios Verificados con código de supermercado.");
           window.location.assign("index.html");
           return;
         }
@@ -178,7 +177,7 @@
 
         document.getElementById("nombre-voluntario").innerText = datosVoluntario.nombre || user.email;
         document.getElementById("detalle-codigo").innerText =
-          `✅ Código verificado: ${datosVoluntario.codigoUsado || "Activo"} | Autorizado por: ${datosVoluntario.supermercadoNombre || "Supermercado Donador"}`;
+          `✅ Voluntario Verificado (Código: ${datosVoluntario.codigoUsado || "Activo"}) | Avalado por: ${datosVoluntario.supermercadoNombre || "Supermercado Donador"}`;
 
         escucharViajes();
       });
@@ -209,11 +208,29 @@
         });
       };
 
-      window.marcarEntregado = async (donacionId) => {
+      // Función 3: Validar el Código Secreto de Recepción del Albergue antes de dar por entregada la comida
+      window.confirmarEntregaConPin = async (donacionId, codigoReal) => {
+        const inputPin = document.getElementById(`pin-entrega-${donacionId}`);
+        const pinIngresado = inputPin.value.trim().toUpperCase();
+
+        if (!pinIngresado) {
+          alert("Por favor ingresa el código de verificación de entrega que aparece en el panel del Albergue.");
+          inputPin.focus();
+          return;
+        }
+
+        if (pinIngresado !== codigoReal) {
+          alert("❌ Código de verificación incorrecto. Pídele al encargado del Albergue el código exacto que aparece en su pantalla (ej. ENT-XXXX).");
+          return;
+        }
+
         await updateDoc(doc(db, "donaciones", donacionId), {
           estado: "entregada",
+          verificadoConCodigo: true,
           fechaEntrega: new Date().toISOString()
         });
+
+        alert("✅ ¡Código confirmado! La entrega quedó registrada con éxito y sin fraude.");
       };
 
       function escucharViajes() {
@@ -225,7 +242,6 @@
             const d = docSnap.data();
             const id = docSnap.id;
 
-            // Construir enlace de ruta para Google Maps
             const origenMapa = d.coordsOrigen
               ? `${d.coordsOrigen.lat},${d.coordsOrigen.lng}`
               : encodeURIComponent(d.direccionOrigen || "");
@@ -234,17 +250,21 @@
               : encodeURIComponent(d.direccionDestino || "");
             const urlMaps = `https://www.google.com/maps/dir/?api=1&origin=${origenMapa}&destination=${destinoMapa}&travelmode=driving`;
 
+            // Solo aparecen aquí las donaciones donde el albergue pidió apoyo de un Voluntario Verificado
             if (d.estado === "solicitada") {
               htmlPendientes += `
                 <div class="notification is-warning is-light mb-3 p-4">
-                  <p class="is-size-5 has-text-weight-bold titulo-verde">${d.producto} (${d.cantidad})</p>
+                  <div class="is-flex is-justify-content-space-between is-align-items-center mb-1">
+                    <p class="is-size-5 has-text-weight-bold titulo-verde">${d.producto} (${d.cantidad})</p>
+                    <span class="tag is-danger is-light">${d.horasVencer}</span>
+                  </div>
                   <p class="is-size-7 mt-1">
                     <strong>1. Recoger en Súper:</strong> ${d.supermercadoNombre} (${d.direccionOrigen})<br>
-                    <strong>2. Entregar en Albergue:</strong> ${d.albergueNombre} (${d.direccionDestino})
+                    <strong>2. Llevar a Albergue:</strong> ${d.albergueNombre} (${d.direccionDestino})
                   </p>
                   <div class="buttons mt-3">
                     <button class="button btn-verde is-small" onclick="aceptarViaje('${id}')">
-                      <strong><i class="fa-solid fa-car mr-1"></i> Aceptar Traslado</strong>
+                      <strong><i class="fa-solid fa-car mr-1"></i> Aceptar Recogida</strong>
                     </button>
                     <a href="${urlMaps}" target="_blank" class="button is-info is-light is-small">
                       <i class="fa-solid fa-map-location-dot mr-1"></i> Ver Ruta en Maps
@@ -253,33 +273,61 @@
                 </div>
               `;
             } else if (d.repartidorId === usuarioActual.uid) {
-              const botonAccion =
-                d.estado === "en_camino"
-                  ? `<button class="button is-success is-small" onclick="marcarEntregado('${id}')">
-                       <strong><i class="fa-solid fa-box-check mr-1"></i> Marcar como Entregado en Albergue</strong>
-                     </button>`
-                  : `<span class="tag is-success is-medium">✅ Entrega Completada</span>`;
+              let bloqueConfirmacion = "";
+
+              if (d.estado === "en_camino") {
+                bloqueConfirmacion = `
+                  <div class="box p-3 mt-3" style="background-color: #ffffff;">
+                    <label class="label is-size-7 texto-rojo mb-1">
+                      🔒 Ingresa el Código de Recepción del Albergue para confirmar que entregaste la donación:
+                    </label>
+                    <div class="field has-addons">
+                      <div class="control is-expanded">
+                        <input
+                          class="input is-small"
+                          type="text"
+                          id="pin-entrega-${id}"
+                          placeholder="Ej. ENT-8492"
+                          style="text-transform: uppercase;"
+                        />
+                      </div>
+                      <div class="control">
+                        <button
+                          class="button is-success is-small"
+                          onclick="confirmarEntregaConPin('${id}', '${d.codigoEntrega}')"
+                        >
+                          <strong><i class="fa-solid fa-check-double mr-1"></i> Verificar y Finalizar</strong>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              } else if (d.estado === "entregada") {
+                bloqueConfirmacion = `
+                  <div class="mt-2">
+                    <span class="tag is-success is-medium">✅ Entrega Verificada con Código Antifraude (${d.codigoEntrega || "OK"})</span>
+                  </div>
+                `;
+              }
 
               htmlMisViajes += `
                 <div class="notification is-light mb-3 p-4">
                   <p class="is-size-5 has-text-weight-bold titulo-verde">${d.producto} (${d.cantidad})</p>
-                  <p class="is-size-7 mb-3">
+                  <p class="is-size-7 mb-2">
                     <strong>De:</strong> ${d.supermercadoNombre} (${d.direccionOrigen})<br>
                     <strong>Para:</strong> ${d.albergueNombre} (${d.direccionDestino})
                   </p>
-                  <div class="buttons">
-                    ${botonAccion}
-                    <a href="${urlMaps}" target="_blank" class="button is-link is-light is-small">
-                      <i class="fa-solid fa-location-arrow mr-1"></i> Abrir GPS en Google Maps
-                    </a>
-                  </div>
+                  <a href="${urlMaps}" target="_blank" class="button is-link is-light is-small">
+                    <i class="fa-solid fa-location-arrow mr-1"></i> Abrir GPS en Google Maps
+                  </a>
+                  ${bloqueConfirmacion}
                 </div>
               `;
             }
           });
 
           document.getElementById("lista-pendientes").innerHTML =
-            htmlPendientes || `<p class="has-text-grey">No hay traslados pendientes por ahora. Cuando un albergue solicite un lote aparecerá aquí.</p>`;
+            htmlPendientes || `<p class="has-text-grey">No hay solicitudes pendientes. Cuando un albergue no pueda ir por un lote y solicite un voluntario verificado, aparecerá aquí.</p>`;
           document.getElementById("lista-mis-viajes").innerHTML =
             htmlMisViajes || `<p class="has-text-grey">Aún no has tomado ningún traslado.</p>`;
         });
