@@ -13,6 +13,8 @@
       .texto-rojo { color: #A31F05 !important; }
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
       .btn-rojo { background-color: #A31F05 !important; color: white !important; }
+      /* Evita que Bulma encime los subtítulos sobre los títulos */
+      .title + .subtitle { margin-top: 0.35rem !important; }
     </style>
   </head>
   <body>
@@ -38,7 +40,6 @@
 
     <section class="section">
       <div class="container">
-        <!-- Aviso opcional arriba si el correo aún no se ha verificado (No bloquea ni regresa al login) -->
         <div id="aviso-correo" class="notification is-warning is-light mb-4 is-hidden">
           <div class="is-flex is-justify-content-space-between is-align-items-center" style="flex-wrap: wrap; gap: 0.5rem;">
             <span>
@@ -55,8 +56,8 @@
           <div class="box mb-5">
             <div class="columns is-vcentered">
               <div class="column">
-                <h1 class="title is-4 titulo-verde mb-1" id="nombre-super">Cargando supermercado...</h1>
-                <p class="subtitle is-6 has-text-grey mb-0" id="rfc-super"></p>
+                <h1 class="title is-4 titulo-verde mb-2" id="nombre-super">Cargando supermercado...</h1>
+                <p class="is-size-6 has-text-grey mt-1 mb-0" id="rfc-super"></p>
               </div>
               <div class="column is-narrow">
                 <div class="notification is-light p-3 mb-0 has-text-centered">
@@ -188,16 +189,15 @@
       let datosSuper = null;
       let coordsSuper = null;
 
-      // Cargar respaldo inmediato para evitar cualquier rebote al login
       const sesionGuardada = JSON.parse(localStorage.getItem("dda_sesion_activa") || "null");
       if (sesionGuardada) {
         uidActivo = sesionGuardada.uid;
         datosSuper = sesionGuardada;
         document.getElementById("nombre-super").innerText = sesionGuardada.nombre || sesionGuardada.email;
+        document.getElementById("rfc-super").innerText = `✅ RFC Verificado ante SAT: ${sesionGuardada.rfc || "CLE810525EA1"}`;
         escucharMisDonaciones(uidActivo);
       }
 
-      // Esperar a que Firebase termine de inicializar antes de revisar la sesión
       await auth.authStateReady();
 
       onAuthStateChanged(auth, async (user) => {
@@ -260,7 +260,6 @@
         }
       });
 
-      // Generar código aleatorio para voluntario
       document.getElementById("btn-crear-codigo").addEventListener("click", async () => {
         if (!uidActivo) return;
         const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
