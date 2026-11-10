@@ -64,7 +64,6 @@
               </p>
               
               <div class="buttons" id="botones-visitante">
-                <!-- Abre el modal de registro con validación SAT / Código directamente o lleva a registro.html -->
                 <button id="btn-abrir-registro" class="button is-info">
                   <strong>Crear cuenta</strong>
                 </button>
@@ -372,7 +371,7 @@
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="assets/js/script.js"></script>
 
-    <!-- Código de Firebase para detectar sesiones, consultarRFCEnSAT y generar códigos -->
+    <!-- Código de Firebase corregido para redirigir sin bloqueos -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
       import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
@@ -392,13 +391,22 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
 
+      // Bandera para evitar que onAuthStateChanged interrumpa la redirección del registro
+      let registrandoUsuario = false;
+
+      // Función para redirigir según el rol
+      function redirigirPorRol(rol) {
+        if (rol === 'donador') window.location.assign("panel_donador.html");
+        else if (rol === 'receptor') window.location.assign("panel_receptor.html");
+        else if (rol === 'repartidor') window.location.assign("panel_repartidor.html");
+      }
+
       // =========================================================================
       // 1. FUNCIÓN consultarRFCEnSAT + VALIDACIÓN OFICIAL DE DÍGITO VERIFICADOR
       // =========================================================================
-      const FACTURAPI_KEY = "TU_API_KEY_DE_FACTURAPI"; // Si tienes llave de Facturapi ponla aquí
+      const FACTURAPI_KEY = "TU_API_KEY_DE_FACTURAPI";
 
       async function consultarRFCEnSAT(rfc) {
-        // Si ya configuraste tu API Key real de Facturapi, consulta en vivo al padrón LRFC del SAT
         if (FACTURAPI_KEY !== "TU_API_KEY_DE_FACTURAPI" && FACTURAPI_KEY.trim() !== "") {
           try {
             const respuesta = await fetch(`https://www.facturapi.io/v2/customers/tax-id-validation?tax_id=${rfc}`, {
@@ -412,13 +420,12 @@
               };
             }
           } catch (err) {
-            console.warn("No se pudo conectar con la API externa, usando algoritmo oficial Anexo 20 del SAT:", err);
+            console.warn("Usando algoritmo oficial Anexo 20 del SAT:", err);
           }
         }
 
-        // Validación matemática del Dígito Verificador Oficial del SAT (Módulo 11 - Anexo 20)
         const diccionario = "0123456789ABCDEFGHIJKLMN&OPQRSTUVWXYZ Ñ";
-        const rfcAjustado = " " + rfc; // Personas morales de 12 caracteres llevan un espacio inicial para sumar 13 posiciones
+        const rfcAjustado = " " + rfc;
         let suma = 0;
 
         for (let i = 0; i < 12; i++) {
@@ -437,7 +444,7 @@
         if (digitoIngresado !== digitoEsperado) {
           return {
             valido: false,
-            error: "El RFC es inválido o inventado: el dígito verificador no coincide con el cálculo oficial del SAT."
+            error: `El RFC es inválido o inventado (para esos datos el dígito final del SAT debería ser '${digitoEsperado}').`
           };
         }
 
@@ -455,22 +462,20 @@
           return { valido: false, error: "No se permiten RFCs genéricos de prueba." };
         }
 
-        // Llamamos a consultarRFCEnSAT
         const consultaSAT = await consultarRFCEnSAT(rfc);
         if (!consultaSAT.valido) {
           return consultaSAT;
         }
 
-        // Comprobar que el giro coincida con Supermercado o Albergue
         const nombreLimpio = razonSocial.toLowerCase();
         const palabrasSuper = ["super", "súper", "comercial", "abarrotes", "mercado", "tienda", "cadena", "autoservicio", "walmart", "soriana", "ley", "oxxo", "bodega", "s.a", "c.v"];
         const palabrasAlbergue = ["albergue", "fundación", "fundacion", "asociación", "asociacion", "casa", "comedor", "refugio", "beneficencia", "a.c", "i.a.p", "caritas", "cáritas", "dif", "banco de alimentos"];
 
         if (rol === "donador" && !palabrasSuper.some(p => nombreLimpio.includes(p))) {
-          return { valido: false, error: "La Razón Social no corresponde al giro de un supermercado o comercializadora." };
+          return { valido: false, error: "La Razón Social no corresponde al giro de un supermercado (incluye palabras como Súper, Comercial, Tienda, S.A. de C.V., etc.)." };
         }
         if (rol === "receptor" && !palabrasAlbergue.some(p => nombreLimpio.includes(p))) {
-          return { valido: false, error: "La Razón Social no corresponde a un albergue, fundación o Asociación Civil (A.C. / I.A.P.)." };
+          return { valido: false, error: "La Razón Social no corresponde a un albergue, comedor, fundación o A.C." };
         }
 
         return { valido: true };
@@ -490,57 +495,58 @@
       const textoCodigoNuevo = document.getElementById('texto-codigo-nuevo');
 
       onAuthStateChanged(auth, async (user) => {
+        if (registrandoUsuario) return;
+
         if (user) {
           botonesVisitante.style.display = 'none';
           menuUsuario.style.display = 'block';
           saludoUsuario.innerText = `¡Hola, ${user.email}! 👋`;
 
-          const docRef = doc(db, "usuarios", user.uid);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            const datos = docSnap.data();
-            const rol = datos.rol;
+          try {
+            const docRef = doc(db, "usuarios", user.uid);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+              const datos = docSnap.data();
+              const rol = datos.rol;
 
-            if (datos.nombre) {
-              saludoUsuario.innerText = `¡Hola, ${datos.nombre}! 👋`;
+              if (datos.nombre) {
+                saludoUsuario.innerText = `¡Hola, ${datos.nombre}! 👋`;
+              }
+
+              if ((rol === 'donador' || rol === 'receptor') && datos.rfc) {
+                detalleVerificacion.innerText = `✅ Verificado ante SAT (RFC: ${datos.rfc})`;
+              } else if (rol === 'repartidor' && datos.codigoUsado) {
+                detalleVerificacion.innerText = `🚗 Voluntario autorizado por: ${datos.supermercadoNombre || datos.codigoUsado}`;
+              }
+
+              btnIrPanel.style.display = 'inline-flex';
+              btnIrPanel.onclick = () => redirigirPorRol(rol);
+
+              if (rol === 'donador') {
+                btnGenerarCodigo.style.display = 'inline-flex';
+                btnGenerarCodigo.onclick = async () => {
+                  const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+                  let aleatorio = "";
+                  for (let i = 0; i < 6; i++) {
+                    aleatorio += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+                  }
+                  const nuevoCodigo = `VOL-${aleatorio}`;
+
+                  await setDoc(doc(db, "codigos_voluntarios", nuevoCodigo), {
+                    supermercadoId: user.uid,
+                    supermercadoNombre: datos.nombre || user.email,
+                    usado: false,
+                    fechaCreacion: new Date().toISOString()
+                  });
+
+                  textoCodigoNuevo.innerText = nuevoCodigo;
+                  cajaCodigoGenerado.style.display = 'block';
+                };
+              }
             }
-
-            if ((rol === 'donador' || rol === 'receptor') && datos.rfc) {
-              detalleVerificacion.innerText = `✅ Verificado ante SAT (RFC: ${datos.rfc})`;
-            } else if (rol === 'repartidor' && datos.codigoUsado) {
-              detalleVerificacion.innerText = `🚗 Voluntario autorizado por: ${datos.supermercadoNombre || datos.codigoUsado}`;
-            }
-
-            btnIrPanel.style.display = 'inline-flex';
-            btnIrPanel.onclick = () => {
-              if (rol === 'donador') window.location.href = "panel_donador.html";
-              else if (rol === 'receptor') window.location.href = "panel_receptor.html";
-              else if (rol === 'repartidor') window.location.href = "panel_repartidor.html";
-            };
-
-            // Si es un supermercado, activar botón generador de códigos aleatorios para voluntarios
-            if (rol === 'donador') {
-              btnGenerarCodigo.style.display = 'inline-flex';
-              btnGenerarCodigo.onclick = async () => {
-                const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-                let aleatorio = "";
-                for (let i = 0; i < 6; i++) {
-                  aleatorio += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-                }
-                const nuevoCodigo = `VOL-${aleatorio}`;
-
-                await setDoc(doc(db, "codigos_voluntarios", nuevoCodigo), {
-                  supermercadoId: user.uid,
-                  supermercadoNombre: datos.nombre || user.email,
-                  usado: false,
-                  fechaCreacion: new Date().toISOString()
-                });
-
-                textoCodigoNuevo.innerText = nuevoCodigo;
-                cajaCodigoGenerado.style.display = 'block';
-              };
-            }
+          } catch (e) {
+            console.error("Error al leer datos del usuario en Firestore:", e);
           }
 
         } else {
@@ -554,14 +560,12 @@
 
       btnCerrarSesion.addEventListener('click', () => {
         signOut(auth).then(() => {
-          console.log("Sesión cerrada");
-        }).catch((error) => {
-          console.error("Error cerrando sesión:", error);
+          window.location.reload();
         });
       });
 
       // =========================================================================
-      // 3. LÓGICA DEL MODAL DE REGISTRO DESDE INDEX.HTML
+      // 3. LÓGICA DEL MODAL DE REGISTRO Y REDIRECCIÓN
       // =========================================================================
       const modalRegistro = document.getElementById('modal-registro');
       const btnAbrirRegistro = document.getElementById('btn-abrir-registro');
@@ -574,6 +578,7 @@
       const labelNombre = document.getElementById('label-nombre');
       const inputNombre = document.getElementById('reg-nombre');
       const cajaErrorReg = document.getElementById('mensaje-error-reg');
+      const btnSubmitReg = document.getElementById('btn-submit-registro');
 
       const abrirModal = (e) => {
         e.preventDefault();
@@ -609,11 +614,15 @@
       function mostrarErrorRegistro(msg) {
         cajaErrorReg.innerText = msg;
         cajaErrorReg.classList.remove('is-hidden');
+        btnSubmitReg.disabled = false;
+        btnSubmitReg.innerHTML = "<strong>Verificar en SAT y Crear Cuenta</strong>";
       }
 
       document.getElementById('form-registro-index').addEventListener('submit', async (e) => {
         e.preventDefault();
         cajaErrorReg.classList.add('is-hidden');
+        btnSubmitReg.disabled = true;
+        btnSubmitReg.innerText = "Verificando y creando cuenta...";
 
         const nombre = inputNombre.value.trim();
         const email = document.getElementById('reg-email').value.trim();
@@ -627,15 +636,19 @@
         let datosExtra = {};
 
         try {
-          // A) Si es Supermercado o Albergue -> Analizar RFC y consultarRFCEnSAT
+          registrandoUsuario = true;
+
+          // A) Si es Supermercado o Albergue -> Analizar RFC
           if (rol === 'donador' || rol === 'receptor') {
             const validacion = await analizarRFCCompleto(rfc, nombre, rol);
             if (!validacion.valido) {
+              registrandoUsuario = false;
               return mostrarErrorRegistro(validacion.error);
             }
 
             const rfcDoc = await getDoc(doc(db, "rfcs_registrados", rfc));
             if (rfcDoc.exists()) {
+              registrandoUsuario = false;
               return mostrarErrorRegistro("Este RFC ya se encuentra registrado en la plataforma.");
             }
 
@@ -644,15 +657,20 @@
 
           // B) Si es Voluntario -> Verificar código aleatorio del supermercado
           if (rol === 'repartidor') {
-            if (!codigo) return mostrarErrorRegistro("Ingresa el código que te dio el supermercado.");
+            if (!codigo) {
+              registrandoUsuario = false;
+              return mostrarErrorRegistro("Ingresa el código que te dio el supermercado.");
+            }
 
             const codigoRef = doc(db, "codigos_voluntarios", codigo);
             const codigoSnap = await getDoc(codigoRef);
 
             if (!codigoSnap.exists()) {
+              registrandoUsuario = false;
               return mostrarErrorRegistro("El código ingresado no existe. Solicita uno nuevo al supermercado.");
             }
             if (codigoSnap.data().usado) {
+              registrandoUsuario = false;
               return mostrarErrorRegistro("Este código ya fue utilizado por otro voluntario.");
             }
 
@@ -690,12 +708,11 @@
             fechaRegistro: new Date().toISOString()
           });
 
-          cerrarModal();
-          if (rol === 'donador') window.location.href = "panel_donador.html";
-          else if (rol === 'receptor') window.location.href = "panel_receptor.html";
-          else if (rol === 'repartidor') window.location.href = "panel_repartidor.html";
+          // Redirigir inmediatamente a la página correspondiente
+          redirigirPorRol(rol);
 
         } catch (error) {
+          registrandoUsuario = false;
           mostrarErrorRegistro("Error al registrar: " + error.message);
         }
       });
