@@ -35,7 +35,6 @@
     </style>
   </head>
   <body>
-    <!-- Barra superior -->
     <nav class="navbar navbar-custom px-4 py-2">
       <div class="navbar-brand">
         <a class="navbar-item has-text-white has-text-weight-bold is-size-4" href="index.html">
@@ -66,7 +65,7 @@
           <h2 class="title is-3 titulo-verde mt-3">Verifica tu correo electrónico para usar el panel</h2>
           <p class="subtitle is-6 mt-2" id="texto-correo-bloqueo"></p>
           <p class="mb-4">
-            Por seguridad fiscal y trazabilidad, debes confirmar el enlace que enviamos a tu bandeja de entrada (revisa también <strong>Spam</strong> o <strong>No deseados</strong>).
+            Por seguridad fiscal y trazabilidad, debes confirmar el enlace que enviamos a tu bandeja de entrada (revisa también <strong>Spam</strong>).
           </p>
           <div class="buttons is-centered">
             <button id="btn-comprobar-correo" class="button is-success is-medium">
@@ -78,9 +77,8 @@
           </div>
         </div>
 
-        <!-- CONTENIDO REAL DEL PANEL (Solo visible si emailVerified === true) -->
+        <!-- CONTENIDO REAL DEL PANEL -->
         <div id="contenido-panel" class="is-hidden">
-          <!-- Encabezado con datos del Supermercado y RFC -->
           <div class="box mb-5">
             <div class="columns is-vcentered">
               <div class="column">
@@ -88,7 +86,6 @@
                 <p class="subtitle is-6 has-text-grey mb-0" id="rfc-super"></p>
               </div>
               <div class="column is-narrow">
-                <!-- Generador de códigos aleatorios para voluntarios -->
                 <div class="notification is-light p-3 mb-0 has-text-centered">
                   <p class="is-size-7 has-text-weight-bold titulo-verde mb-2">
                     <i class="fa-solid fa-id-card-clip mr-1"></i> AUTORIZAR VOLUNTARIO REPARTIDOR
@@ -105,17 +102,17 @@
           </div>
 
           <div class="columns">
-            <!-- Columna Izquierda: Publicar Lote a 72h de vencer -->
+            <!-- Columna Izquierda: Publicar Lote con flexibilidad de hasta 2 semanas -->
             <div class="column is-5">
               <div class="box">
                 <h3 class="title is-5 texto-rojo">
-                  <i class="fa-solid fa-box-open mr-2"></i> Publicar Lote (Alerta 72 Horas)
+                  <i class="fa-solid fa-box-open mr-2"></i> Publicar Lote de Donación
                 </h3>
                 <form id="form-donacion">
                   <div class="field">
                     <label class="label">Alimento / Producto</label>
                     <div class="control">
-                      <input class="input" type="text" id="producto" placeholder="Ej. 15 Cajas de Pan y Lácteos" required />
+                      <input class="input" type="text" id="producto" placeholder="Ej. Cajas de Cereales, Enlatados o Lácteos" required />
                     </div>
                   </div>
 
@@ -127,16 +124,21 @@
                   </div>
 
                   <div class="field">
-                    <label class="label">Horas restantes antes de vencer</label>
+                    <label class="label">Tiempo límite de donación (hasta 2 semanas)</label>
                     <div class="control">
                       <div class="select is-fullwidth">
                         <select id="horas-vencer" required>
-                          <option value="72 horas (3 días)">72 horas (3 días)</option>
-                          <option value="48 horas (2 días)">48 horas (2 días)</option>
                           <option value="24 horas (Urgente)">24 horas (Urgente)</option>
+                          <option value="48 horas (2 días)">48 horas (2 días)</option>
+                          <option value="72 horas (3 días)" selected>72 horas (3 días)</option>
+                          <option value="5 días">5 días</option>
+                          <option value="1 semana (7 días)">1 semana (7 días)</option>
+                          <option value="10 días">10 días</option>
+                          <option value="2 semanas (14 días - Máximo)">2 semanas (14 días - Máximo)</option>
                         </select>
                       </div>
                     </div>
+                    <p class="help">Puedes extender este plazo más adelante si el lote sigue en buen estado.</p>
                   </div>
 
                   <div class="field">
@@ -150,7 +152,7 @@
                     <button type="button" id="btn-ubicacion" class="button is-info is-light is-fullwidth is-small mb-2">
                       <i class="fa-solid fa-location-crosshairs mr-1"></i> Adjuntar coordenadas GPS actuales
                     </button>
-                    <p id="estado-gps" class="help has-text-grey">Opcional: facilita la ruta exacta para el voluntario.</p>
+                    <p id="estado-gps" class="help has-text-grey">Opcional: facilita la ruta exacta para el albergue o voluntario.</p>
                   </div>
 
                   <button type="submit" id="btn-publicar" class="button btn-rojo is-fullwidth mt-3">
@@ -160,11 +162,11 @@
               </div>
             </div>
 
-            <!-- Columna Derecha: Mis Donaciones y Trazabilidad -->
+            <!-- Columna Derecha: Mis Donaciones, Extensión de Tiempo y Trazabilidad -->
             <div class="column is-7">
               <div class="box">
                 <h3 class="title is-5 titulo-verde">
-                  <i class="fa-solid fa-truck-fast mr-2"></i> Trazabilidad de mis Lotes Publicados
+                  <i class="fa-solid fa-truck-fast mr-2"></i> Trazabilidad y Extensión de Plazos
                 </h3>
                 <div id="lista-mis-donaciones">
                   <p class="has-text-grey">Cargando lotes...</p>
@@ -189,6 +191,7 @@
         doc,
         getDoc,
         setDoc,
+        updateDoc,
         collection,
         addDoc,
         query,
@@ -227,7 +230,6 @@
 
         usuarioActual = user;
 
-        // 1. CANDADO OBLIGATORIO DE VERIFICACIÓN DE CORREO
         if (!user.emailVerified) {
           bloqueoCorreo.classList.remove("is-hidden");
           contenidoPanel.classList.add("is-hidden");
@@ -235,7 +237,6 @@
           return;
         }
 
-        // 2. Verificar que su rol sea "donador" en Firestore
         const docSnap = await getDoc(doc(db, "usuarios", user.uid));
         if (!docSnap.exists() || docSnap.data().rol !== "donador") {
           alert("No tienes permisos de Supermercado (Donador).");
@@ -253,22 +254,18 @@
         escucharMisDonaciones(user.uid);
       });
 
-      // Botones cuando el correo aún no está verificado
       document.getElementById("btn-comprobar-correo").addEventListener("click", async () => {
         if (auth.currentUser) {
           await auth.currentUser.reload();
-          if (auth.currentUser.emailVerified) {
-            window.location.reload();
-          } else {
-            alert("Todavía no aparece confirmado. Haz clic en el enlace que llegó a tu correo y vuelve a presionar este botón.");
-          }
+          if (auth.currentUser.emailVerified) window.location.reload();
+          else alert("Todavía no aparece confirmado. Haz clic en el enlace que llegó a tu correo y vuelve a presionar este botón.");
         }
       });
 
       document.getElementById("btn-reenviar-correo").addEventListener("click", async () => {
         try {
           await sendEmailVerification(auth.currentUser);
-          alert("¡Correo de verificación enviado! Revisa tu bandeja de entrada y la carpeta de Spam.");
+          alert("¡Correo de verificación enviado! Revisa tu bandeja de entrada y Spam.");
         } catch (e) {
           alert("Espera un minuto antes de volver a enviarlo: " + e.message);
         }
@@ -295,7 +292,7 @@
         document.getElementById("caja-codigo").classList.remove("is-hidden");
       });
 
-      // Capturar coordenadas GPS del supermercado
+      // Capturar coordenadas GPS
       document.getElementById("btn-ubicacion").addEventListener("click", () => {
         const estadoGps = document.getElementById("estado-gps");
         if (!navigator.geolocation) {
@@ -331,18 +328,52 @@
             horasVencer: document.getElementById("horas-vencer").value,
             direccionOrigen: document.getElementById("direccion").value.trim(),
             coordsOrigen: coordsSuper,
-            estado: "disponible", // disponible -> solicitada -> en_camino -> entregada
+            estado: "disponible",
             fechaPublicacion: new Date().toISOString()
           });
 
           document.getElementById("form-donacion").reset();
-          document.getElementById("estado-gps").innerText = "Lote publicado con éxito.";
+          document.getElementById("estado-gps").innerText = "✅ Lote publicado con éxito.";
         } catch (err) {
           alert("Error al publicar lote: " + err.message);
         } finally {
           btn.disabled = false;
         }
       });
+
+      // Función 1: Extender el tiempo de donación (hasta 2 semanas)
+      window.extenderTiempoDonacion = async (donacionId) => {
+        const selectNuevo = document.getElementById(`ext-${donacionId}`);
+        if (!selectNuevo || !selectNuevo.value) return;
+
+        await updateDoc(doc(db, "donaciones", donacionId), {
+          horasVencer: selectNuevo.value + " (Plazo extendido)",
+          ultimaExtension: new Date().toISOString()
+        });
+        alert("✅ Tiempo de donación extendido a: " + selectNuevo.value);
+      };
+
+      // Función 3 (En caso de que el albergue pase directamente a la tienda): Validar PIN antifraude
+      window.validarPinEntregaEnTienda = async (donacionId, codigoReal) => {
+        const inputPin = document.getElementById(`pin-tienda-${donacionId}`);
+        const pinIngresado = inputPin.value.trim().toUpperCase();
+
+        if (!pinIngresado) {
+          alert("Ingresa el código de verificación que te dicte el representante del albergue.");
+          return;
+        }
+        if (pinIngresado !== codigoReal) {
+          alert("❌ Código incorrecto. No entregues el lote hasta que el albergue te proporcione su código de recepción válido.");
+          return;
+        }
+
+        await updateDoc(doc(db, "donaciones", donacionId), {
+          estado: "entregada",
+          verificadoConCodigo: true,
+          fechaEntrega: new Date().toISOString()
+        });
+        alert("✅ Código verificado correctamente. Entrega confirmada sin fraude.");
+      };
 
       // Escuchar mis donaciones en tiempo real
       function escucharMisDonaciones(uid) {
@@ -357,25 +388,76 @@
           let html = "";
           snapshot.forEach((docSnap) => {
             const d = docSnap.data();
+            const id = docSnap.id;
+
             let badge = `<span class="tag is-info">Disponible para Albergues</span>`;
-            if (d.estado === "solicitada") {
-              badge = `<span class="tag is-warning">Solicitada por: ${d.albergueNombre} (Esperando Voluntario)</span>`;
+            let controlesExtra = "";
+
+            if (d.estado === "recoge_albergue") {
+              badge = `<span class="tag is-primary">🏢 El Albergue (${d.albergueNombre}) pasará a recogerlo</span>`;
+              controlesExtra = `
+                <div class="box p-3 mt-3" style="background-color: #f9f9f9;">
+                  <p class="is-size-7 has-text-weight-bold mb-2">
+                    🔒 Cuando llegue el personal de <strong>${d.albergueNombre}</strong>, pídeles su código de recepción para liberar la entrega:
+                  </p>
+                  <div class="field has-addons">
+                    <div class="control is-expanded">
+                      <input class="input is-small" type="text" id="pin-tienda-${id}" placeholder="Ej. ENT-4829" style="text-transform: uppercase;">
+                    </div>
+                    <div class="control">
+                      <button class="button is-success is-small" onclick="validarPinEntregaEnTienda('${id}', '${d.codigoEntrega}')">
+                        <strong>Verificar y Entregar</strong>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else if (d.estado === "solicitada") {
+              badge = `<span class="tag is-warning">Solicitada por: ${d.albergueNombre} (Buscando Voluntario Verificado)</span>`;
             } else if (d.estado === "en_camino") {
               badge = `<span class="tag is-link">🚗 En camino con voluntario: ${d.repartidorNombre}</span>`;
             } else if (d.estado === "entregada") {
-              badge = `<span class="tag is-success">✅ Entregada en ${d.albergueNombre}</span>`;
+              badge = `<span class="tag is-success">✅ Entregada y Verificada con Código en ${d.albergueNombre}</span>`;
+            }
+
+            // Si aún no se ha entregado, permitir extender el plazo hasta 2 semanas
+            let bloqueExtension = "";
+            if (d.estado !== "entregada") {
+              bloqueExtension = `
+                <div class="field has-addons mt-2">
+                  <div class="control">
+                    <div class="select is-small">
+                      <select id="ext-${id}">
+                        <option value="">Extender tiempo límite...</option>
+                        <option value="72 horas (3 días)">Extender a 72 horas (3 días)</option>
+                        <option value="5 días">Extender a 5 días</option>
+                        <option value="1 semana (7 días)">Extender a 1 semana (7 días)</option>
+                        <option value="10 días">Extender a 10 días</option>
+                        <option value="2 semanas (14 días)">Extender a 2 semanas (14 días - Máx.)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="control">
+                    <button class="button is-info is-light is-small" onclick="extenderTiempoDonacion('${id}')">
+                      <i class="fa-solid fa-calendar-plus mr-1"></i> Extender plazo
+                    </button>
+                  </div>
+                </div>
+              `;
             }
 
             html += `
               <div class="notification is-light mb-3 p-4">
-                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2" style="flex-wrap: wrap; gap: 0.5rem;">
                   <strong class="is-size-5 titulo-verde">${d.producto} (${d.cantidad})</strong>
                   ${badge}
                 </div>
                 <p class="is-size-7 has-text-grey">
-                  <i class="fa-solid fa-clock mr-1"></i> Vence en: <strong>${d.horasVencer}</strong> |
+                  <i class="fa-solid fa-clock mr-1"></i> Tiempo límite actual: <strong>${d.horasVencer}</strong> |
                   <i class="fa-solid fa-location-dot ml-2 mr-1"></i> Sucursal: ${d.direccionOrigen}
                 </p>
+                ${bloqueExtension}
+                ${controlesExtra}
               </div>
             `;
           });
