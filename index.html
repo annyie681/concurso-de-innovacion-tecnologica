@@ -751,11 +751,7 @@
               return mostrarErrorRegistro(validacion.error);
             }
 
-            const rfcDoc = await getDoc(doc(db, "rfcs_registrados", rfc));
-            if (rfcDoc.exists()) {
-              registrandoUsuario = false;
-              return mostrarErrorRegistro("Este RFC ya se encuentra registrado por otra cuenta en la plataforma.");
-            }
+            
 
             datosExtra = { rfc: rfc, verificado: true };
           }
