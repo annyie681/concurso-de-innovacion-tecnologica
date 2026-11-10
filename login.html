@@ -1,71 +1,124 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Iniciar Sesión</title>
+    <title>Iniciar Sesión - Fundación DDA</title>
     <link rel="stylesheet" href="assets/css/bulma.min.css" />
     <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+      integrity="sha512-KfkfwYDsLkIlwQp6LFnl8zNdLGxu9YAA1QvwINks4PhcElQSvqcyVLLD9aMhXd13uQjoXtEKNosOWaZqXgel0g=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <style>
-      .bg-base { background-color: #FFBDB0 !important; }
-      .texto-rojo { color: #A31F05 !important; }
-      .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+      body {
+        background-color: #FFBDB0 !important;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .texto-rojo {
+        color: #A31F05 !important;
+      }
+      .texto-verde {
+        color: #2D4F00 !important;
+      }
+      .btn-rojo {
+        background-color: #A31F05 !important;
+        color: #ffffff !important;
+      }
     </style>
   </head>
   <body>
-    <section class="hero bg-base is-fullheight">
-      <div class="hero-body">
-        <div class="container">
-          <div class="columns is-centered">
-            <div class="column is-4-desktop">
-              <div class="box p-6">
-                <h1 class="title has-text-centered texto-rojo mb-5">Iniciar Sesión</h1>
-                
-                <form id="login-form">
-                  <div class="field">
-                    <label class="label">Correo electrónico</label>
-                    <div class="control has-icons-left">
-                      <input class="input" type="email" id="login-email" placeholder="ejemplo@correo.com" required>
-                      <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
-                    </div>
-                  </div>
-
-                  <div class="field">
-                    <label class="label">Contraseña</label>
-                    <div class="control has-icons-left">
-                      <input class="input" type="password" id="login-password" placeholder="********" required>
-                      <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
-                    </div>
-                  </div>
-
-                  <div id="login-message" class="has-text-centered mb-3 mt-4"></div>
-
-                  <div class="field mt-5">
-                    <button type="submit" class="button is-primary is-fullwidth"><strong>Entrar</strong></button>
-                  </div>
-                </form>
-
-                <p class="has-text-centered mt-4">
-                  ¿No tienes cuenta? <a href="registro.html" class="texto-rojo has-text-weight-bold">Regístrate</a>
+    <section class="section" style="width: 100%;">
+      <div class="container">
+        <div class="columns is-centered">
+          <div class="column is-5-tablet is-4-desktop">
+            <div class="box p-5">
+              <div class="has-text-centered mb-4">
+                <span class="icon is-large texto-rojo">
+                  <i class="fa-solid fa-hand-holding-heart fa-2x"></i>
+                </span>
+                <h2 class="title is-3 texto-verde mt-2">Iniciar Sesión</h2>
+                <p class="subtitle is-6 has-text-grey">
+                  Acceso para supermercados, albergues y voluntarios verificados
                 </p>
-                <p class="has-text-centered mt-2">
-                  <a href="index.html" class="has-text-grey">Volver al inicio</a>
-                </p>
-
               </div>
+
+              <form id="form-login">
+                <div class="field">
+                  <label class="label">Correo electrónico</label>
+                  <div class="control has-icons-left">
+                    <input
+                      class="input"
+                      type="email"
+                      id="login-email"
+                      placeholder="correo@ejemplo.com"
+                      required
+                    />
+                    <span class="icon is-small is-left">
+                      <i class="fa-solid fa-envelope"></i>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label">Contraseña</label>
+                  <div class="control has-icons-left">
+                    <input
+                      class="input"
+                      type="password"
+                      id="login-password"
+                      placeholder="********"
+                      required
+                    />
+                    <span class="icon is-small is-left">
+                      <i class="fa-solid fa-lock"></i>
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  id="mensaje-error"
+                  class="notification is-danger is-light is-hidden mt-3 p-3 is-size-6"
+                ></div>
+
+                <button
+                  type="submit"
+                  id="btn-entrar"
+                  class="button btn-rojo is-fullwidth is-medium mt-4"
+                >
+                  <strong>Entrar a mi Panel</strong>
+                </button>
+
+                <div class="has-text-centered mt-4">
+                  <a href="index.html" class="has-text-grey is-size-6">
+                    ← Volver al inicio / Crear cuenta
+                  </a>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Scripts de Firebase -->
+    <!-- Lógica de Firebase para Login y Redirección por Rol -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-      import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-      // IMPORTAMOS FIRESTORE PARA LEER EL ROL
-      import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+      import {
+        getAuth,
+        signInWithEmailAndPassword
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        getDoc
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
@@ -81,59 +134,64 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
 
-      document.getElementById('login-form').addEventListener('submit', (e) => {
+      const formLogin = document.getElementById("form-login");
+      const cajaError = document.getElementById("mensaje-error");
+      const btnEntrar = document.getElementById("btn-entrar");
+
+      function mostrarError(msg) {
+        cajaError.innerText = msg;
+        cajaError.classList.remove("is-hidden");
+        btnEntrar.disabled = false;
+        btnEntrar.innerHTML = "<strong>Entrar a mi Panel</strong>";
+      }
+
+      formLogin.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        const msgDiv = document.getElementById('login-message');
+        cajaError.classList.add("is-hidden");
+        btnEntrar.disabled = true;
+        btnEntrar.innerText = "Verificando acceso...";
 
-        msgDiv.innerHTML = "<p class='has-text-info'>Iniciando sesión...</p>";
+        const email = document.getElementById("login-email").value.trim();
+        const password = document.getElementById("login-password").value;
 
-        signInWithEmailAndPassword(auth, email, password)
-          .then(async (userCredential) => {
-            msgDiv.innerHTML = "<p class='has-text-info'>Verificando tu tipo de cuenta...</p>";
-            
-            const user = userCredential.user;
-            
-            try {
-              // BUSCAMOS AL USUARIO EN LA BASE DE DATOS
-              const docRef = doc(db, "usuarios", user.uid);
-              const docSnap = await getDoc(docRef);
+        try {
+          // 1. Iniciar sesión en Firebase Auth
+          const credencial = await signInWithEmailAndPassword(auth, email, password);
+          const uid = credencial.user.uid;
 
-              if (docSnap.exists()) {
-                const rol = docSnap.data().rol;
-                msgDiv.innerHTML = "<p class='has-text-success has-text-weight-bold'>¡Bienvenido! Cargando tu panel...</p>";
-                
-                // REDIRECCIÓN INTELIGENTE DEPENDIENDO DEL ROL
-                setTimeout(() => {
-                  if (rol === 'donador') {
-                    window.location.href = "panel_donador.html";
-                  } else if (rol === 'receptor') {
-                    window.location.href = "panel_receptor.html";
-                  } else if (rol === 'repartidor') {
-                    window.location.href = "panel_repartidor.html";
-                  } else {
-                    // Por si acaso alguien no tiene rol
-                    window.location.href = "index.html"; 
-                  }
-                }, 1500);
+          // 2. Consultar el rol y estado de verificación en Firestore
+          const userDoc = await getDoc(doc(db, "usuarios", uid));
 
-              } else {
-                msgDiv.innerHTML = "<p class='has-text-warning'>Cuenta sin rol asignado.</p>";
-                setTimeout(() => { window.location.href = "index.html"; }, 1500);
-              }
-            } catch (error) {
-              console.error("Error al obtener el rol:", error);
-              msgDiv.innerHTML = "<p class='has-text-danger'>Hubo un problema al cargar tus datos.</p>";
-            }
-          })
-          .catch((error) => {
-            if(error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password'){
-               msgDiv.innerHTML = `<p class='has-text-danger'>Correo o contraseña incorrectos.</p>`;
-            } else {
-               msgDiv.innerHTML = `<p class='has-text-danger'>Error: ${error.message}</p>`;
-            }
-          });
+          if (!userDoc.exists()) {
+            return mostrarError(
+              "Tu usuario no tiene un perfil asignado en la base de datos. Regístrate nuevamente."
+            );
+          }
+
+          const datos = userDoc.data();
+          const rol = datos.rol;
+
+          // 3. Redirigir al panel correspondiente según su rol
+          if (rol === "donador") {
+            window.location.assign("panel_donador.html");
+          } else if (rol === "receptor") {
+            window.location.assign("panel_receptor.html");
+          } else if (rol === "repartidor") {
+            window.location.assign("panel_repartidor.html");
+          } else {
+            window.location.assign("index.html");
+          }
+        } catch (error) {
+          if (
+            error.code === "auth/invalid-credential" ||
+            error.code === "auth/wrong-password" ||
+            error.code === "auth/user-not-found"
+          ) {
+            mostrarError("Correo o contraseña incorrectos.");
+          } else {
+            mostrarError("Error al iniciar sesión: " + error.message);
+          }
+        }
       });
     </script>
   </body>
