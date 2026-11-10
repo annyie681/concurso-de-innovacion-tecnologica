@@ -123,8 +123,6 @@
         uidActivo = sesionGuardada.uid;
         datosVoluntario = sesionGuardada;
         document.getElementById("nombre-voluntario").innerText = sesionGuardada.nombre || sesionGuardada.email;
-        document.getElementById("detalle-codigo").innerText =
-          `✅ Voluntario Verificado (Código: ${sesionGuardada.codigoUsado || "Activo"}) | Avalado por: ${sesionGuardada.supermercadoNombre || "Supermercado Donador"}`;
         escucharViajes();
       }
 
