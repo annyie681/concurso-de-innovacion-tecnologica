@@ -1,111 +1,175 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Panel de Donador - Súper</title>
+    <title>Panel Supermercado (Donador) - Fundación DDA</title>
     <link rel="stylesheet" href="assets/css/bulma.min.css" />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+    />
     <style>
-      .bg-base { background-color: #FFBDB0 !important; }
-      .texto-rojo { color: #A31F05 !important; }
-      .box { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-      #panel-content { display: none; }
+      body {
+        background-color: #FFBDB0;
+        min-height: 100vh;
+      }
+      .navbar-custom {
+        background-color: #A31F05;
+        color: white;
+      }
+      .titulo-verde {
+        color: #2D4F00 !important;
+      }
+      .texto-rojo {
+        color: #A31F05 !important;
+      }
+      .btn-verde {
+        background-color: #2D4F00 !important;
+        color: white !important;
+      }
+      .btn-rojo {
+        background-color: #A31F05 !important;
+        color: white !important;
+      }
     </style>
   </head>
-  <body class="bg-base">
-    
-    <nav class="navbar is-white" style="border-radius: 0 0 15px 15px; margin-bottom: 2rem; padding: 0.5rem 2rem;">
+  <body>
+    <!-- Barra superior -->
+    <nav class="navbar navbar-custom px-4 py-2">
       <div class="navbar-brand">
-        <a class="navbar-item texto-rojo has-text-weight-bold is-size-4" href="index.html">
-          <i class="fa-solid fa-leaf mr-2"></i> Inicio
+        <a class="navbar-item has-text-white has-text-weight-bold is-size-4" href="index.html">
+          <i class="fa-solid fa-store mr-2"></i> Panel Supermercado
         </a>
       </div>
-      <div class="navbar-menu is-active" style="background: transparent; box-shadow: none;">
-        <div class="navbar-end">
-          <div class="navbar-item">
-            <span class="tag is-light is-medium mr-4 texto-rojo">Perfil: Súper/Donador</span>
-            <button id="btn-cerrar-sesion" class="button is-danger is-outlined">
-              <i class="fa-solid fa-right-from-bracket mr-2"></i> Salir
+      <div class="navbar-end">
+        <div class="navbar-item">
+          <div class="buttons">
+            <a href="index.html" class="button is-light is-small">
+              <i class="fa-solid fa-house mr-1"></i> Inicio
+            </a>
+            <button id="btn-salir" class="button is-dark is-small">
+              <i class="fa-solid fa-right-from-bracket mr-1"></i> Cerrar sesión
             </button>
           </div>
         </div>
       </div>
     </nav>
 
-    <section class="section pt-0" id="panel-content">
+    <section class="section">
       <div class="container">
-        <h1 class="title texto-rojo mb-5">¡Hola de nuevo! <span id="user-email" class="is-size-4 has-text-weight-normal"></span></h1>
-
-        <div class="columns mb-5">
-          <div class="column is-4">
-            <div class="box has-text-centered">
-              <p class="heading">Comida Salvada</p>
-              <p class="title texto-rojo"><span id="stat-kilos">0</span> kg</p>
-            </div>
-          </div>
-          <div class="column is-4">
-            <div class="box has-text-centered">
-              <p class="heading">Alertas Emitidas</p>
-              <p class="title texto-rojo" id="stat-alertas">0</p>
-            </div>
-          </div>
-          <div class="column is-4">
-            <div class="box has-text-centered">
-              <p class="heading">Estado GPS</p>
-              <p class="title texto-rojo is-size-5 mt-2" id="gps-status">Cargando...</p>
-            </div>
+        <!-- BLOQUEO SI NO HA VERIFICADO SU CORREO ELECTRÓNICO -->
+        <div id="bloqueo-correo" class="box has-text-centered p-6 is-hidden">
+          <span class="icon is-large texto-rojo">
+            <i class="fa-solid fa-envelope-open-text fa-3x"></i>
+          </span>
+          <h2 class="title is-3 titulo-verde mt-3">Verifica tu correo electrónico para usar el panel</h2>
+          <p class="subtitle is-6 mt-2" id="texto-correo-bloqueo"></p>
+          <p class="mb-4">
+            Por seguridad fiscal y trazabilidad, debes confirmar el enlace que enviamos a tu bandeja de entrada (revisa también <strong>Spam</strong> o <strong>No deseados</strong>).
+          </p>
+          <div class="buttons is-centered">
+            <button id="btn-comprobar-correo" class="button is-success is-medium">
+              <strong>¡Ya abrí el enlace! Entrar al Panel</strong>
+            </button>
+            <button id="btn-reenviar-correo" class="button is-warning is-medium">
+              Reenviar correo de verificación
+            </button>
           </div>
         </div>
 
-        <div class="columns is-variable is-6">
-          <div class="column is-5">
-            <div class="box p-5" style="height: 100%;">
-              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-bullhorn mr-2"></i> Emitir Alerta</h2>
-              <form id="form-alerta">
-                <div class="field">
-                  <label class="label">Descripción del Alimento</label>
-                  <div class="control has-icons-left">
-                    <input class="input" type="text" id="alerta-desc" placeholder="Ej. 2 cajas de pan..." required>
-                    <span class="icon is-small is-left"><i class="fa-solid fa-carrot"></i></span>
+        <!-- CONTENIDO REAL DEL PANEL (Solo visible si emailVerified === true) -->
+        <div id="contenido-panel" class="is-hidden">
+          <!-- Encabezado con datos del Supermercado y RFC -->
+          <div class="box mb-5">
+            <div class="columns is-vcentered">
+              <div class="column">
+                <h1 class="title is-4 titulo-verde mb-1" id="nombre-super">Cargando supermercado...</h1>
+                <p class="subtitle is-6 has-text-grey mb-0" id="rfc-super"></p>
+              </div>
+              <div class="column is-narrow">
+                <!-- Generador de códigos aleatorios para voluntarios -->
+                <div class="notification is-light p-3 mb-0 has-text-centered">
+                  <p class="is-size-7 has-text-weight-bold titulo-verde mb-2">
+                    <i class="fa-solid fa-id-card-clip mr-1"></i> AUTORIZAR VOLUNTARIO REPARTIDOR
+                  </p>
+                  <button id="btn-crear-codigo" class="button btn-verde is-small is-fullwidth">
+                    <i class="fa-solid fa-key mr-1"></i> Generar código aleatorio (1 uso)
+                  </button>
+                  <div id="caja-codigo" class="mt-2 is-hidden">
+                    <span class="tag is-warning is-medium has-text-weight-bold" id="codigo-mostrado" style="letter-spacing: 2px;"></span>
                   </div>
                 </div>
-                <div class="columns">
-                  <div class="column">
-                    <div class="field">
-                      <label class="label">Peso (kg)</label>
-                      <div class="control">
-                        <input class="input" type="number" id="alerta-peso" placeholder="Ej. 20" required>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="column">
-                    <div class="field">
-                      <label class="label">Caduca en</label>
-                      <div class="control">
-                        <div class="select is-fullwidth">
-                          <select id="alerta-tiempo">
-                            <option value="72">72 horas</option>
-                            <option value="48">48 horas</option>
-                            <option value="24">24 horas</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <button type="submit" id="btn-lanzar" class="button is-info is-fullwidth is-medium mt-4">
-                  <strong><i class="fa-solid fa-paper-plane mr-2"></i> Lanzar Alerta</strong>
-                </button>
-              </form>
+              </div>
             </div>
           </div>
 
-          <div class="column is-7">
-            <div class="box p-5" style="height: 100%; background-color: #fcfcfc;">
-              <h2 class="title is-4 texto-rojo"><i class="fa-solid fa-route mr-2"></i> Monitor de Trazabilidad</h2>
-              <div id="contenedor-monitor"><p class="has-text-grey has-text-centered mt-6">Cargando alertas...</p></div>
+          <div class="columns">
+            <!-- Columna Izquierda: Publicar Lote a 72h de vencer -->
+            <div class="column is-5">
+              <div class="box">
+                <h3 class="title is-5 texto-rojo">
+                  <i class="fa-solid fa-box-open mr-2"></i> Publicar Lote (Alerta 72 Horas)
+                </h3>
+                <form id="form-donacion">
+                  <div class="field">
+                    <label class="label">Alimento / Producto</label>
+                    <div class="control">
+                      <input class="input" type="text" id="producto" placeholder="Ej. 15 Cajas de Pan y Lácteos" required />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="label">Peso o Cantidad Total</label>
+                    <div class="control">
+                      <input class="input" type="text" id="cantidad" placeholder="Ej. 25 kg / 40 piezas" required />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="label">Horas restantes antes de vencer</label>
+                    <div class="control">
+                      <div class="select is-fullwidth">
+                        <select id="horas-vencer" required>
+                          <option value="72 horas (3 días)">72 horas (3 días)</option>
+                          <option value="48 horas (2 días)">48 horas (2 días)</option>
+                          <option value="24 horas (Urgente)">24 horas (Urgente)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="label">Dirección de recolección (Sucursal)</label>
+                    <div class="control">
+                      <input class="input" type="text" id="direccion" placeholder="Ej. Blvd. Kino #450, Hermosillo" required />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <button type="button" id="btn-ubicacion" class="button is-info is-light is-fullwidth is-small mb-2">
+                      <i class="fa-solid fa-location-crosshairs mr-1"></i> Adjuntar coordenadas GPS actuales
+                    </button>
+                    <p id="estado-gps" class="help has-text-grey">Opcional: facilita la ruta exacta para el voluntario.</p>
+                  </div>
+
+                  <button type="submit" id="btn-publicar" class="button btn-rojo is-fullwidth mt-3">
+                    <strong><i class="fa-solid fa-bullhorn mr-2"></i> Emitir Alerta de Donación</strong>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Mis Donaciones y Trazabilidad -->
+            <div class="column is-7">
+              <div class="box">
+                <h3 class="title is-5 titulo-verde">
+                  <i class="fa-solid fa-truck-fast mr-2"></i> Trazabilidad de mis Lotes Publicados
+                </h3>
+                <div id="lista-mis-donaciones">
+                  <p class="has-text-grey">Cargando lotes...</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -114,8 +178,23 @@
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-      import { getFirestore, collection, addDoc, serverTimestamp, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+        sendEmailVerification
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        collection,
+        addDoc,
+        query,
+        where,
+        onSnapshot
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
@@ -123,86 +202,190 @@
         projectId: "bd-concurso",
         storageBucket: "bd-concurso.firebasestorage.app",
         messagingSenderId: "944372990629",
-        appId: "1:944372990629:web:1bd61c44cf1274eadc034c"
+        appId: "1:944372990629:web:1bd61c44cf1274eadc034c",
+        measurementId: "G-LMSMQBD5CL"
       };
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
+      auth.languageCode = "es";
       const db = getFirestore(app);
-      let currentUser = null;
-      let miLat = null, miLng = null;
 
-      // Obtener GPS al abrir la página
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => { miLat = pos.coords.latitude; miLng = pos.coords.longitude; document.getElementById('gps-status').innerHTML = 'Activo <i class="fa-solid fa-circle-check has-text-success"></i>'; },
-          (err) => { document.getElementById('gps-status').innerHTML = 'Inactivo <i class="fa-solid fa-circle-xmark has-text-danger"></i>'; }
-        );
-      } else {
-        document.getElementById('gps-status').innerHTML = 'No Soportado';
-      }
+      let usuarioActual = null;
+      let datosSuper = null;
+      let coordsSuper = null;
 
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          currentUser = user;
-          document.getElementById('panel-content').style.display = 'block';
-          document.getElementById('user-email').innerText = user.email;
+      const bloqueoCorreo = document.getElementById("bloqueo-correo");
+      const contenidoPanel = document.getElementById("contenido-panel");
+      const textoCorreoBloqueo = document.getElementById("texto-correo-bloqueo");
 
-          const q = query(collection(db, "alertas"), where("donadorId", "==", user.uid));
-          onSnapshot(q, (snapshot) => {
-            const contenedor = document.getElementById('contenedor-monitor');
-            contenedor.innerHTML = ''; 
-            let totalKilos = 0; let totalAlertas = 0;
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.assign("login.html");
+          return;
+        }
 
-            if (snapshot.empty) contenedor.innerHTML = '<p class="has-text-grey has-text-centered mt-6">No tienes alertas activas.</p>';
+        usuarioActual = user;
 
-            snapshot.forEach((doc) => {
-              const alerta = doc.data();
-              totalAlertas++;
-              totalKilos += Number(alerta.peso);
+        // 1. CANDADO OBLIGATORIO DE VERIFICACIÓN DE CORREO
+        if (!user.emailVerified) {
+          bloqueoCorreo.classList.remove("is-hidden");
+          contenidoPanel.classList.add("is-hidden");
+          textoCorreoBloqueo.innerHTML = `Cuenta: <strong>${user.email}</strong> (Pendiente de confirmar enlace)`;
+          return;
+        }
 
-              let colorBorde = alerta.estado === 'Entregado' ? '#00d1b2' : (alerta.estado === 'Buscando Repartidor' ? '#ffdd57' : '#48c774');
-              let tagEstado = `<span class="tag is-success mb-2">${alerta.estado}</span>`;
-              if (alerta.estado === 'Buscando Repartidor') tagEstado = `<span class="tag is-warning">Buscando Repartidor</span>`;
-              
-              contenedor.innerHTML += `
-                <div class="box mb-3" style="border-left: 5px solid ${colorBorde};">
-                  <div class="columns is-vcentered">
-                    <div class="column is-7">
-                      <p class="has-text-weight-bold">${alerta.peso}kg de ${alerta.descripcion}</p>
-                    </div>
-                    <div class="column is-5 has-text-right">${tagEstado}<br><span class="is-size-7">PIN: <strong class="texto-rojo">${alerta.pinSeguridad}</strong></span></div>
-                  </div>
-                </div>`;
-            });
-            document.getElementById('stat-kilos').innerText = totalKilos;
-            document.getElementById('stat-alertas').innerText = totalAlertas;
-          });
-        } else { window.location.href = "login.html"; }
+        // 2. Verificar que su rol sea "donador" en Firestore
+        const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+        if (!docSnap.exists() || docSnap.data().rol !== "donador") {
+          alert("No tienes permisos de Supermercado (Donador).");
+          window.location.assign("index.html");
+          return;
+        }
+
+        datosSuper = docSnap.data();
+        bloqueoCorreo.classList.add("is-hidden");
+        contenidoPanel.classList.remove("is-hidden");
+
+        document.getElementById("nombre-super").innerText = datosSuper.nombre || user.email;
+        document.getElementById("rfc-super").innerText = `✅ RFC Verificado ante SAT: ${datosSuper.rfc || "Autorizado"} | Correo confirmado`;
+
+        escucharMisDonaciones(user.uid);
       });
 
-      document.getElementById('form-alerta').addEventListener('submit', async (e) => {
+      // Botones cuando el correo aún no está verificado
+      document.getElementById("btn-comprobar-correo").addEventListener("click", async () => {
+        if (auth.currentUser) {
+          await auth.currentUser.reload();
+          if (auth.currentUser.emailVerified) {
+            window.location.reload();
+          } else {
+            alert("Todavía no aparece confirmado. Haz clic en el enlace que llegó a tu correo y vuelve a presionar este botón.");
+          }
+        }
+      });
+
+      document.getElementById("btn-reenviar-correo").addEventListener("click", async () => {
+        try {
+          await sendEmailVerification(auth.currentUser);
+          alert("¡Correo de verificación enviado! Revisa tu bandeja de entrada y la carpeta de Spam.");
+        } catch (e) {
+          alert("Espera un minuto antes de volver a enviarlo: " + e.message);
+        }
+      });
+
+      // Generar código aleatorio para voluntario
+      document.getElementById("btn-crear-codigo").addEventListener("click", async () => {
+        if (!usuarioActual) return;
+        const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let aleatorio = "";
+        for (let i = 0; i < 6; i++) {
+          aleatorio += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+        }
+        const nuevoCodigo = `VOL-${aleatorio}`;
+
+        await setDoc(doc(db, "codigos_voluntarios", nuevoCodigo), {
+          supermercadoId: usuarioActual.uid,
+          supermercadoNombre: datosSuper.nombre || usuarioActual.email,
+          usado: false,
+          fechaCreacion: new Date().toISOString()
+        });
+
+        document.getElementById("codigo-mostrado").innerText = nuevoCodigo;
+        document.getElementById("caja-codigo").classList.remove("is-hidden");
+      });
+
+      // Capturar coordenadas GPS del supermercado
+      document.getElementById("btn-ubicacion").addEventListener("click", () => {
+        const estadoGps = document.getElementById("estado-gps");
+        if (!navigator.geolocation) {
+          estadoGps.innerText = "Tu navegador no soporta geolocalización.";
+          return;
+        }
+        estadoGps.innerText = "Obteniendo coordenadas GPS...";
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            coordsSuper = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            estadoGps.innerText = `✅ GPS adjuntado (${coordsSuper.lat.toFixed(4)}, ${coordsSuper.lng.toFixed(4)})`;
+            estadoGps.className = "help has-text-success has-text-weight-bold";
+          },
+          () => {
+            estadoGps.innerText = "No se pudo obtener el GPS, se usará la dirección escrita.";
+          }
+        );
+      });
+
+      // Publicar Lote de Donación
+      document.getElementById("form-donacion").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const btnLanzar = document.getElementById('btn-lanzar');
-        btnLanzar.classList.add('is-loading'); 
+        const btn = document.getElementById("btn-publicar");
+        btn.disabled = true;
 
         try {
-          await addDoc(collection(db, "alertas"), {
-            descripcion: document.getElementById('alerta-desc').value,
-            peso: Number(document.getElementById('alerta-peso').value),
-            tiempoCaducidad: document.getElementById('alerta-tiempo').value,
-            donadorId: currentUser.uid, donadorEmail: currentUser.email,
-            estado: 'Buscando Repartidor',
-            pinSeguridad: Math.floor(1000 + Math.random() * 9000).toString(), 
-            latitud: miLat, longitud: miLng,
-            fechaCreacion: serverTimestamp()
+          await addDoc(collection(db, "donaciones"), {
+            donadorId: usuarioActual.uid,
+            supermercadoNombre: datosSuper.nombre || usuarioActual.email,
+            rfcDonador: datosSuper.rfc || "",
+            producto: document.getElementById("producto").value.trim(),
+            cantidad: document.getElementById("cantidad").value.trim(),
+            horasVencer: document.getElementById("horas-vencer").value,
+            direccionOrigen: document.getElementById("direccion").value.trim(),
+            coordsOrigen: coordsSuper,
+            estado: "disponible", // disponible -> solicitada -> en_camino -> entregada
+            fechaPublicacion: new Date().toISOString()
           });
-          document.getElementById('form-alerta').reset();
-        } catch (error) { alert("Error al guardar en base de datos."); }
-        btnLanzar.classList.remove('is-loading');
+
+          document.getElementById("form-donacion").reset();
+          document.getElementById("estado-gps").innerText = "Lote publicado con éxito.";
+        } catch (err) {
+          alert("Error al publicar lote: " + err.message);
+        } finally {
+          btn.disabled = false;
+        }
       });
 
-      document.getElementById('btn-cerrar-sesion').addEventListener('click', () => { signOut(auth); });
+      // Escuchar mis donaciones en tiempo real
+      function escucharMisDonaciones(uid) {
+        const q = query(collection(db, "donaciones"), where("donadorId", "==", uid));
+        onSnapshot(q, (snapshot) => {
+          const contenedor = document.getElementById("lista-mis-donaciones");
+          if (snapshot.empty) {
+            contenedor.innerHTML = `<p class="has-text-grey">Aún no has publicado lotes de alimentos.</p>`;
+            return;
+          }
+
+          let html = "";
+          snapshot.forEach((docSnap) => {
+            const d = docSnap.data();
+            let badge = `<span class="tag is-info">Disponible para Albergues</span>`;
+            if (d.estado === "solicitada") {
+              badge = `<span class="tag is-warning">Solicitada por: ${d.albergueNombre} (Esperando Voluntario)</span>`;
+            } else if (d.estado === "en_camino") {
+              badge = `<span class="tag is-link">🚗 En camino con voluntario: ${d.repartidorNombre}</span>`;
+            } else if (d.estado === "entregada") {
+              badge = `<span class="tag is-success">✅ Entregada en ${d.albergueNombre}</span>`;
+            }
+
+            html += `
+              <div class="notification is-light mb-3 p-4">
+                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                  <strong class="is-size-5 titulo-verde">${d.producto} (${d.cantidad})</strong>
+                  ${badge}
+                </div>
+                <p class="is-size-7 has-text-grey">
+                  <i class="fa-solid fa-clock mr-1"></i> Vence en: <strong>${d.horasVencer}</strong> |
+                  <i class="fa-solid fa-location-dot ml-2 mr-1"></i> Sucursal: ${d.direccionOrigen}
+                </p>
+              </div>
+            `;
+          });
+          contenedor.innerHTML = html;
+        });
+      }
+
+      document.getElementById("btn-salir").addEventListener("click", () => {
+        signOut(auth).then(() => window.location.assign("index.html"));
+      });
     </script>
   </body>
 </html>
