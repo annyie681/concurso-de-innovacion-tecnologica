@@ -194,7 +194,6 @@
         uidActivo = sesionGuardada.uid;
         datosSuper = sesionGuardada;
         document.getElementById("nombre-super").innerText = sesionGuardada.nombre || sesionGuardada.email;
-        document.getElementById("rfc-super").innerText = `✅ RFC Verificado ante SAT: ${sesionGuardada.rfc || "CLE810525EA1"}`;
         escucharMisDonaciones(uidActivo);
       }
 
