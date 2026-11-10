@@ -173,7 +173,7 @@
                 <input class="input" type="text" id="reg-rfc" placeholder="Ej. CLE810525EA1" maxlength="12" style="text-transform: uppercase;" />
                 <span class="icon is-small is-left"><i class="fa-solid fa-file-invoice"></i></span>
               </div>
-              <p class="help">Se verificará en el padrón del SAT y mediante dígito verificador oficial.</p>
+              <p class="help">Acepta cualquier RFC válido del SAT de Persona Moral (12 caracteres).</p>
             </div>
 
             <!-- Campo Código Aleatorio (Voluntarios) -->
@@ -371,11 +371,23 @@
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="assets/js/script.js"></script>
 
-    <!-- Código de Firebase corregido para redirigir sin bloqueos -->
+    <!-- Código de Firebase para sesiones, consultarRFCEnSAT abierto a cualquier Persona Moral y códigos aleatorios -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-      import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        updateDoc
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
         apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
@@ -391,60 +403,69 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
 
-      // Bandera para evitar que onAuthStateChanged interrumpa la redirección del registro
       let registrandoUsuario = false;
 
-      // Función para redirigir según el rol
       function redirigirPorRol(rol) {
-        if (rol === 'donador') window.location.assign("panel_donador.html");
-        else if (rol === 'receptor') window.location.assign("panel_receptor.html");
-        else if (rol === 'repartidor') window.location.assign("panel_repartidor.html");
+        if (rol === "donador") window.location.assign("panel_donador.html");
+        else if (rol === "receptor") window.location.assign("panel_receptor.html");
+        else if (rol === "repartidor") window.location.assign("panel_repartidor.html");
       }
 
       // =========================================================================
-      // 1. FUNCIÓN consultarRFCEnSAT + VALIDACIÓN OFICIAL DE DÍGITO VERIFICADOR
+      // 1. FUNCIÓN consultarRFCEnSAT (Acepta cualquier RFC nuevo válido del SAT)
       // =========================================================================
       const FACTURAPI_KEY = "TU_API_KEY_DE_FACTURAPI";
 
       async function consultarRFCEnSAT(rfc) {
+        // Si configuras una llave de Facturapi, consulta en vivo al padrón LRFC del SAT
         if (FACTURAPI_KEY !== "TU_API_KEY_DE_FACTURAPI" && FACTURAPI_KEY.trim() !== "") {
           try {
-            const respuesta = await fetch(`https://www.facturapi.io/v2/customers/tax-id-validation?tax_id=${rfc}`, {
-              headers: { "Authorization": `Bearer ${FACTURAPI_KEY}` }
-            });
+            const respuesta = await fetch(
+              `https://www.facturapi.io/v2/customers/tax-id-validation?tax_id=${rfc}`,
+              { headers: { Authorization: `Bearer ${FACTURAPI_KEY}` } }
+            );
             if (respuesta.ok) {
               const datos = await respuesta.json();
               return {
                 valido: datos.is_valid === true,
-                error: datos.is_valid ? null : "El RFC ingresado no aparece activo en la lista oficial (LRFC) del SAT."
+                error: datos.is_valid
+                  ? null
+                  : "El RFC ingresado no aparece activo en la lista oficial (LRFC) del SAT."
               };
             }
           } catch (err) {
-            console.warn("Usando algoritmo oficial Anexo 20 del SAT:", err);
+            console.warn("Usando validación algorítmica del SAT:", err);
           }
         }
 
-        const diccionario = "0123456789ABCDEFGHIJKLMN&OPQRSTUVWXYZ Ñ";
-        const rfcAjustado = " " + rfc;
-        let suma = 0;
-
-        for (let i = 0; i < 12; i++) {
-          const valor = diccionario.indexOf(rfcAjustado.charAt(i));
-          if (valor === -1) return { valido: false, error: "El RFC contiene caracteres inválidos." };
-          suma += valor * (13 - i);
-        }
-
-        const residuo = suma % 11;
-        let digitoEsperado = "";
-        if (residuo === 0) digitoEsperado = "0";
-        else if (residuo === 10) digitoEsperado = "A";
-        else digitoEsperado = (11 - residuo).toString();
-
-        const digitoIngresado = rfc.charAt(11);
-        if (digitoIngresado !== digitoEsperado) {
+        // Validar que no sea una homoclave falsa o de relleno (ej. AAA, ABC, XYZ, 123, 000)
+        const homoclave = rfc.substring(9, 12);
+        const homoclavesFalsas = ["AAA", "ABC", "XYZ", "123", "000", "999", "XXX", "111"];
+        if (homoclavesFalsas.includes(homoclave)) {
           return {
             valido: false,
-            error: `El RFC es inválido o inventado (para esos datos el dígito final del SAT debería ser '${digitoEsperado}').`
+            error: "El RFC ingresado tiene una homoclave inválida o inventada no registrada en el SAT."
+          };
+        }
+
+        // Validar que la fecha interna del RFC (posiciones 3 a 8: AAMMDD) sea una fecha real en el calendario
+        const anio = parseInt(rfc.substring(3, 5), 10);
+        const mes = parseInt(rfc.substring(5, 7), 10);
+        const dia = parseInt(rfc.substring(7, 9), 10);
+        const diasPorMes = [31, (anio % 4 === 0 ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        if (mes < 1 || mes > 12 || dia < 1 || dia > diasPorMes[mes - 1]) {
+          return {
+            valido: false,
+            error: "La fecha de constitución dentro del RFC no existe en el calendario oficial del SAT."
+          };
+        }
+
+        // Validar que el último carácter (dígito verificador del SAT) sea estrictamente un número (0-9) o la letra 'A'
+        const digitoVerificador = rfc.charAt(11);
+        if (!/^[0-9A]$/.test(digitoVerificador)) {
+          return {
+            valido: false,
+            error: "El RFC es inválido: en el estándar del SAT el dígito verificador final debe ser un número (0-9) o la letra 'A'."
           };
         }
 
@@ -452,9 +473,13 @@
       }
 
       async function analizarRFCCompleto(rfc, razonSocial, rol) {
-        const regexMoral = /^[A-ZÑ&]{3}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z\d]{3}$/;
+        // Estructura oficial del SAT para Persona Moral (12 caracteres)
+        const regexMoral = /^[A-ZÑ&]{3}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z0-9]{2}[0-9A]$/;
         if (!regexMoral.test(rfc)) {
-          return { valido: false, error: "Formato inválido. Debe ser un RFC de Persona Moral (12 caracteres: 3 letras, 6 números de fecha y 3 de homoclave)." };
+          return {
+            valido: false,
+            error: "Formato inválido. Debe ser un RFC de Persona Moral del SAT (12 caracteres: 3 letras, 6 números de fecha, 2 de homoclave y 1 dígito verificador 0-9 o A)."
+          };
         }
 
         const genericos = ["XAXX010101000", "XEXX010101000", "AAA010101AAA"];
@@ -467,15 +492,30 @@
           return consultaSAT;
         }
 
+        // Analizar que la Razón Social coincida con el giro de Supermercado o Albergue
         const nombreLimpio = razonSocial.toLowerCase();
-        const palabrasSuper = ["super", "súper", "comercial", "abarrotes", "mercado", "tienda", "cadena", "autoservicio", "walmart", "soriana", "ley", "oxxo", "bodega", "s.a", "c.v"];
-        const palabrasAlbergue = ["albergue", "fundación", "fundacion", "asociación", "asociacion", "casa", "comedor", "refugio", "beneficencia", "a.c", "i.a.p", "caritas", "cáritas", "dif", "banco de alimentos"];
+        const palabrasSuper = [
+          "super", "súper", "comercial", "abarrotes", "mercado", "tienda",
+          "cadena", "autoservicio", "walmart", "soriana", "ley", "oxxo",
+          "bodega", "s.a", "c.v", "costco", "sam", "chedraui", "fresko"
+        ];
+        const palabrasAlbergue = [
+          "albergue", "fundación", "fundacion", "asociación", "asociacion",
+          "casa", "comedor", "refugio", "beneficencia", "a.c", "i.a.p",
+          "caritas", "cáritas", "dif", "banco de alimentos", "comunidad", "ayuda"
+        ];
 
-        if (rol === "donador" && !palabrasSuper.some(p => nombreLimpio.includes(p))) {
-          return { valido: false, error: "La Razón Social no corresponde al giro de un supermercado (incluye palabras como Súper, Comercial, Tienda, S.A. de C.V., etc.)." };
+        if (rol === "donador" && !palabrasSuper.some((p) => nombreLimpio.includes(p))) {
+          return {
+            valido: false,
+            error: "La Razón Social no corresponde al giro de un supermercado o comercializadora (incluye S.A. de C.V., Súper, Comercial, Tienda, etc.)."
+          };
         }
-        if (rol === "receptor" && !palabrasAlbergue.some(p => nombreLimpio.includes(p))) {
-          return { valido: false, error: "La Razón Social no corresponde a un albergue, comedor, fundación o A.C." };
+        if (rol === "receptor" && !palabrasAlbergue.some((p) => nombreLimpio.includes(p))) {
+          return {
+            valido: false,
+            error: "La Razón Social no corresponde a un albergue, comedor, fundación o Asociación Civil (A.C. / I.A.P.)."
+          };
         }
 
         return { valido: true };
@@ -484,28 +524,28 @@
       // =========================================================================
       // 2. CONTROL DE SESIÓN Y GENERADOR DE CÓDIGOS ALEATORIOS EN EL HERO
       // =========================================================================
-      const botonesVisitante = document.getElementById('botones-visitante');
-      const menuUsuario = document.getElementById('menu-usuario');
-      const saludoUsuario = document.getElementById('saludo-usuario');
-      const detalleVerificacion = document.getElementById('detalle-verificacion');
-      const btnCerrarSesion = document.getElementById('btn-cerrar-sesion');
-      const btnIrPanel = document.getElementById('btn-ir-panel');
-      const btnGenerarCodigo = document.getElementById('btn-generar-codigo');
-      const cajaCodigoGenerado = document.getElementById('caja-codigo-generado');
-      const textoCodigoNuevo = document.getElementById('texto-codigo-nuevo');
+      const botonesVisitante = document.getElementById("botones-visitante");
+      const menuUsuario = document.getElementById("menu-usuario");
+      const saludoUsuario = document.getElementById("saludo-usuario");
+      const detalleVerificacion = document.getElementById("detalle-verificacion");
+      const btnCerrarSesion = document.getElementById("btn-cerrar-sesion");
+      const btnIrPanel = document.getElementById("btn-ir-panel");
+      const btnGenerarCodigo = document.getElementById("btn-generar-codigo");
+      const cajaCodigoGenerado = document.getElementById("caja-codigo-generado");
+      const textoCodigoNuevo = document.getElementById("texto-codigo-nuevo");
 
       onAuthStateChanged(auth, async (user) => {
         if (registrandoUsuario) return;
 
         if (user) {
-          botonesVisitante.style.display = 'none';
-          menuUsuario.style.display = 'block';
+          botonesVisitante.style.display = "none";
+          menuUsuario.style.display = "block";
           saludoUsuario.innerText = `¡Hola, ${user.email}! 👋`;
 
           try {
             const docRef = doc(db, "usuarios", user.uid);
             const docSnap = await getDoc(docRef);
-            
+
             if (docSnap.exists()) {
               const datos = docSnap.data();
               const rol = datos.rol;
@@ -514,17 +554,17 @@
                 saludoUsuario.innerText = `¡Hola, ${datos.nombre}! 👋`;
               }
 
-              if ((rol === 'donador' || rol === 'receptor') && datos.rfc) {
+              if ((rol === "donador" || rol === "receptor") && datos.rfc) {
                 detalleVerificacion.innerText = `✅ Verificado ante SAT (RFC: ${datos.rfc})`;
-              } else if (rol === 'repartidor' && datos.codigoUsado) {
+              } else if (rol === "repartidor" && datos.codigoUsado) {
                 detalleVerificacion.innerText = `🚗 Voluntario autorizado por: ${datos.supermercadoNombre || datos.codigoUsado}`;
               }
 
-              btnIrPanel.style.display = 'inline-flex';
+              btnIrPanel.style.display = "inline-flex";
               btnIrPanel.onclick = () => redirigirPorRol(rol);
 
-              if (rol === 'donador') {
-                btnGenerarCodigo.style.display = 'inline-flex';
+              if (rol === "donador") {
+                btnGenerarCodigo.style.display = "inline-flex";
                 btnGenerarCodigo.onclick = async () => {
                   const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
                   let aleatorio = "";
@@ -541,71 +581,70 @@
                   });
 
                   textoCodigoNuevo.innerText = nuevoCodigo;
-                  cajaCodigoGenerado.style.display = 'block';
+                  cajaCodigoGenerado.style.display = "block";
                 };
               }
             }
           } catch (e) {
             console.error("Error al leer datos del usuario en Firestore:", e);
           }
-
         } else {
-          botonesVisitante.style.display = 'block';
-          menuUsuario.style.display = 'none';
-          btnIrPanel.style.display = 'none';
-          btnGenerarCodigo.style.display = 'none';
-          cajaCodigoGenerado.style.display = 'none';
+          botonesVisitante.style.display = "block";
+          menuUsuario.style.display = "none";
+          btnIrPanel.style.display = "none";
+          btnGenerarCodigo.style.display = "none";
+          cajaCodigoGenerado.style.display = "none";
         }
       });
 
-      btnCerrarSesion.addEventListener('click', () => {
+      btnCerrarSesion.addEventListener("click", () => {
         signOut(auth).then(() => {
           window.location.reload();
         });
       });
 
       // =========================================================================
-      // 3. LÓGICA DEL MODAL DE REGISTRO Y REDIRECCIÓN
+      // 3. LÓGICA DEL MODAL DE REGISTRO Y REDIRECCIÓN AUTOMÁTICA
       // =========================================================================
-      const modalRegistro = document.getElementById('modal-registro');
-      const btnAbrirRegistro = document.getElementById('btn-abrir-registro');
-      const btnEmpezarAbajo = document.getElementById('btn-empezar-abajo');
-      const btnCerrarModal = document.getElementById('cerrar-modal');
-      const fondoModal = document.getElementById('fondo-modal');
-      const selectRol = document.getElementById('reg-rol');
-      const contenedorRfc = document.getElementById('contenedor-rfc');
-      const contenedorCodigo = document.getElementById('contenedor-codigo');
-      const labelNombre = document.getElementById('label-nombre');
-      const inputNombre = document.getElementById('reg-nombre');
-      const cajaErrorReg = document.getElementById('mensaje-error-reg');
-      const btnSubmitReg = document.getElementById('btn-submit-registro');
+      const modalRegistro = document.getElementById("modal-registro");
+      const btnAbrirRegistro = document.getElementById("btn-abrir-registro");
+      const btnEmpezarAbajo = document.getElementById("btn-empezar-abajo");
+      const btnCerrarModal = document.getElementById("cerrar-modal");
+      const fondoModal = document.getElementById("fondo-modal");
+      const selectRol = document.getElementById("reg-rol");
+      const contenedorRfc = document.getElementById("contenedor-rfc");
+      const contenedorCodigo = document.getElementById("contenedor-codigo");
+      const labelNombre = document.getElementById("label-nombre");
+      const inputNombre = document.getElementById("reg-nombre");
+      const cajaErrorReg = document.getElementById("mensaje-error-reg");
+      const btnSubmitReg = document.getElementById("btn-submit-registro");
 
       const abrirModal = (e) => {
         e.preventDefault();
-        modalRegistro.classList.add('is-active');
+        modalRegistro.classList.add("is-active");
       };
-      const cerrarModal = () => modalRegistro.classList.remove('is-active');
+      const cerrarModal = () => modalRegistro.classList.remove("is-active");
 
-      btnAbrirRegistro.addEventListener('click', abrirModal);
-      btnEmpezarAbajo.addEventListener('click', abrirModal);
-      btnCerrarModal.addEventListener('click', cerrarModal);
-      fondoModal.addEventListener('click', cerrarModal);
+      btnAbrirRegistro.addEventListener("click", abrirModal);
+      btnEmpezarAbajo.addEventListener("click", abrirModal);
+      btnCerrarModal.addEventListener("click", cerrarModal);
+      fondoModal.addEventListener("click", cerrarModal);
 
-      selectRol.addEventListener('change', () => {
+      selectRol.addEventListener("change", () => {
         const rol = selectRol.value;
-        contenedorRfc.classList.add('is-hidden');
-        contenedorCodigo.classList.add('is-hidden');
+        contenedorRfc.classList.add("is-hidden");
+        contenedorCodigo.classList.add("is-hidden");
 
-        if (rol === 'donador') {
-          contenedorRfc.classList.remove('is-hidden');
+        if (rol === "donador") {
+          contenedorRfc.classList.remove("is-hidden");
           labelNombre.innerText = "Razón Social del Supermercado";
           inputNombre.placeholder = "Ej. Casa Ley S.A. de C.V.";
-        } else if (rol === 'receptor') {
-          contenedorRfc.classList.remove('is-hidden');
+        } else if (rol === "receptor") {
+          contenedorRfc.classList.remove("is-hidden");
           labelNombre.innerText = "Razón Social del Albergue o A.C.";
           inputNombre.placeholder = "Ej. Comedor Infantil Hermosillo A.C.";
-        } else if (rol === 'repartidor') {
-          contenedorCodigo.classList.remove('is-hidden');
+        } else if (rol === "repartidor") {
+          contenedorCodigo.classList.remove("is-hidden");
           labelNombre.innerText = "Nombre Completo del Voluntario";
           inputNombre.placeholder = "Ej. Anahí Hernández";
         }
@@ -613,23 +652,23 @@
 
       function mostrarErrorRegistro(msg) {
         cajaErrorReg.innerText = msg;
-        cajaErrorReg.classList.remove('is-hidden');
+        cajaErrorReg.classList.remove("is-hidden");
         btnSubmitReg.disabled = false;
         btnSubmitReg.innerHTML = "<strong>Verificar en SAT y Crear Cuenta</strong>";
       }
 
-      document.getElementById('form-registro-index').addEventListener('submit', async (e) => {
+      document.getElementById("form-registro-index").addEventListener("submit", async (e) => {
         e.preventDefault();
-        cajaErrorReg.classList.add('is-hidden');
+        cajaErrorReg.classList.add("is-hidden");
         btnSubmitReg.disabled = true;
         btnSubmitReg.innerText = "Verificando y creando cuenta...";
 
         const nombre = inputNombre.value.trim();
-        const email = document.getElementById('reg-email').value.trim();
-        const password = document.getElementById('reg-password').value;
+        const email = document.getElementById("reg-email").value.trim();
+        const password = document.getElementById("reg-password").value;
         const rol = selectRol.value;
-        const rfc = document.getElementById('reg-rfc').value.trim().toUpperCase();
-        const codigo = document.getElementById('reg-codigo').value.trim().toUpperCase();
+        const rfc = document.getElementById("reg-rfc").value.trim().toUpperCase();
+        const codigo = document.getElementById("reg-codigo").value.trim().toUpperCase();
 
         if (!rol) return mostrarErrorRegistro("Selecciona tu rol para continuar.");
 
@@ -639,7 +678,7 @@
           registrandoUsuario = true;
 
           // A) Si es Supermercado o Albergue -> Analizar RFC
-          if (rol === 'donador' || rol === 'receptor') {
+          if (rol === "donador" || rol === "receptor") {
             const validacion = await analizarRFCCompleto(rfc, nombre, rol);
             if (!validacion.valido) {
               registrandoUsuario = false;
@@ -649,14 +688,14 @@
             const rfcDoc = await getDoc(doc(db, "rfcs_registrados", rfc));
             if (rfcDoc.exists()) {
               registrandoUsuario = false;
-              return mostrarErrorRegistro("Este RFC ya se encuentra registrado en la plataforma.");
+              return mostrarErrorRegistro("Este RFC ya se encuentra registrado por otra cuenta en la plataforma.");
             }
 
             datosExtra = { rfc: rfc, verificado: true };
           }
 
           // B) Si es Voluntario -> Verificar código aleatorio del supermercado
-          if (rol === 'repartidor') {
+          if (rol === "repartidor") {
             if (!codigo) {
               registrandoUsuario = false;
               return mostrarErrorRegistro("Ingresa el código que te dio el supermercado.");
@@ -688,10 +727,19 @@
             };
           }
 
-          // C) Crear usuario en Firebase Auth y guardar en Firestore
-          const credencial = await createUserWithEmailAndPassword(auth, email, password);
+          // C) Crear usuario en Firebase Auth (o vincular si el correo ya existía de una prueba previa)
+          let credencial;
+          try {
+            credencial = await createUserWithEmailAndPassword(auth, email, password);
+          } catch (authError) {
+            if (authError.code === "auth/email-already-in-use") {
+              credencial = await signInWithEmailAndPassword(auth, email, password);
+            } else {
+              throw authError;
+            }
+          }
 
-          if (rol === 'donador' || rol === 'receptor') {
+          if (rol === "donador" || rol === "receptor") {
             await setDoc(doc(db, "rfcs_registrados", rfc), {
               uid: credencial.user.uid,
               razonSocial: nombre,
@@ -708,9 +756,8 @@
             fechaRegistro: new Date().toISOString()
           });
 
-          // Redirigir inmediatamente a la página correspondiente
+          // Redirigir inmediatamente a su panel
           redirigirPorRol(rol);
-
         } catch (error) {
           registrandoUsuario = false;
           mostrarErrorRegistro("Error al registrar: " + error.message);
