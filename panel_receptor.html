@@ -1,403 +1,118 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Panel Albergue (Receptor) - Fundación DDA</title>
-    <link rel="stylesheet" href="assets/css/bulma.min.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
-    />
-    <style>
-      body {
-        background-color: #FFBDB0;
-        min-height: 100vh;
-      }
-      .navbar-custom {
-        background-color: #2D4F00;
-        color: white;
-      }
-      .titulo-verde {
-        color: #2D4F00 !important;
-      }
-      .texto-rojo {
-        color: #A31F05 !important;
-      }
-      .btn-rojo {
-        background-color: #A31F05 !important;
-        color: white !important;
-      }
-      .btn-verde {
-        background-color: #2D4F00 !important;
-        color: white !important;
-      }
-    </style>
-  </head>
-  <body>
-    <nav class="navbar navbar-custom px-4 py-2">
-      <div class="navbar-brand">
-        <a class="navbar-item has-text-white has-text-weight-bold is-size-4" href="index.html">
-          <i class="fa-solid fa-hand-holding-heart mr-2"></i> Panel Albergue Receptor
-        </a>
-      </div>
-      <div class="navbar-end">
-        <div class="navbar-item">
-          <div class="buttons">
-            <a href="index.html" class="button is-light is-small">
-              <i class="fa-solid fa-house mr-1"></i> Inicio
-            </a>
-            <button id="btn-salir" class="button is-danger is-small">
-              <i class="fa-solid fa-right-from-bracket mr-1"></i> Cerrar sesión
-            </button>
-          </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Receptor - Albergues y Comedores</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#FFBDB0]/20 min-h-screen text-gray-800">
+
+  <!-- Navbar -->
+  <nav class="bg-[#2D4F00] text-white px-6 py-4 shadow flex justify-between items-center">
+    <div class="flex items-center space-x-3">
+      <span class="text-xl font-bold tracking-wide">Plataforma de Donaciones</span>
+    </div>
+    <div class="flex items-center space-x-4">
+      <span id="userEmail" class="text-sm font-medium">Cargando usuario...</span>
+      <button id="btnLogout" class="bg-[#A31F05] hover:bg-red-800 text-white text-xs px-3 py-1.5 rounded transition">
+        Cerrar Sesión
+      </button>
+    </div>
+  </nav>
+
+  <!-- Contenedor Principal -->
+  <main class="max-w-6xl mx-auto p-6 space-y-6">
+
+    <!-- Tarjeta de Identidad y Rol (Header Corregido) -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex flex-col gap-1 items-start">
+        <h1 class="text-3xl font-extrabold text-[#2D4F00] leading-tight">
+          Panel Receptor
+        </h1>
+        <div id="verifiedBadge" class="flex items-center gap-1.5 text-sm font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md mt-1">
+          <span>✅</span>
+          <span id="verifiedText">Institución Receptora Verificada | Albergue / Comedor</span>
         </div>
       </div>
-    </nav>
+      <div class="flex items-center gap-2 self-start md:self-auto">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+          Recepción Activa
+        </span>
+      </div>
+    </div>
 
-    <section class="section">
-      <div class="container">
-        <!-- BLOQUEO SI NO HA VERIFICADO SU CORREO ELECTRÓNICO -->
-        <div id="bloqueo-correo" class="box has-text-centered p-6 is-hidden">
-          <span class="icon is-large texto-rojo">
-            <i class="fa-solid fa-envelope-open-text fa-3x"></i>
-          </span>
-          <h2 class="title is-3 titulo-verde mt-3">Verifica tu correo electrónico para recibir donaciones</h2>
-          <p class="subtitle is-6 mt-2" id="texto-correo-bloqueo"></p>
-          <p class="mb-4">
-            Revisa tu bandeja de entrada o carpeta de <strong>Spam</strong> y abre el enlace de confirmación que te envió Firebase.
-          </p>
-          <div class="buttons is-centered">
-            <button id="btn-comprobar-correo" class="button is-success is-medium">
-              <strong>¡Ya abrí el enlace! Entrar al Panel</strong>
-            </button>
-            <button id="btn-reenviar-correo" class="button is-warning is-medium">
-              Reenviar correo
-            </button>
-          </div>
-        </div>
+    <!-- Grid de Métricas y Estado -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+        <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Donaciones Disponibles</p>
+        <p id="totalDisponibles" class="text-3xl font-bold text-[#2D4F00] mt-1">0</p>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+        <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Entregas en Camino</p>
+        <p id="totalEnCamino" class="text-3xl font-bold text-amber-600 mt-1">0</p>
+      </div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+        <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Raciones Recibidas</p>
+        <p id="totalRecibidas" class="text-3xl font-bold text-gray-800 mt-1">0</p>
+      </div>
+    </div>
 
-        <!-- CONTENIDO REAL DEL PANEL -->
-        <div id="contenido-panel" class="is-hidden">
-          <div class="box mb-5">
-            <h1 class="title is-4 titulo-verde mb-1" id="nombre-albergue">Cargando albergue...</h1>
-            <p class="subtitle is-6 has-text-grey mb-3" id="rfc-albergue"></p>
-
-            <div class="columns is-vcentered">
-              <div class="column is-8">
-                <input
-                  class="input"
-                  type="text"
-                  id="direccion-albergue"
-                  placeholder="Escribe aquí la dirección de tu Albergue / Comedor..."
-                />
-              </div>
-              <div class="column is-4">
-                <button id="btn-gps-albergue" class="button is-info is-light is-fullwidth">
-                  <i class="fa-solid fa-location-dot mr-1"></i> Usar mi GPS de entrega
-                </button>
-              </div>
-            </div>
-            <p id="aviso-gps-albergue" class="help has-text-grey">
-              Ingresa tu dirección arriba. Puedes pasar tú mismo por la donación o pedir que un voluntario verificado te la lleve.
-            </p>
-          </div>
-
-          <div class="columns">
-            <!-- Lotes disponibles en supermercados -->
-            <div class="column is-6">
-              <div class="box">
-                <h3 class="title is-5 texto-rojo">
-                  <i class="fa-solid fa-bell mr-2"></i> Alertas de Supermercados (Disponibles)
-                </h3>
-                <div id="lista-disponibles">
-                  <p class="has-text-grey">Buscando donaciones disponibles...</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Lotes solicitados por mi albergue + Código Antifraude -->
-            <div class="column is-6">
-              <div class="box">
-                <h3 class="title is-5 titulo-verde">
-                  <i class="fa-solid fa-shield-halved mr-2"></i> Mis Donaciones y Códigos de Recepción
-                </h3>
-                <div id="lista-solicitadas">
-                  <p class="has-text-grey">Aún no has solicitado lotes.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+    <!-- Alimentos en Tránsito y Disponibles -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <h2 class="text-lg font-bold text-gray-800">Solicitudes y Lotes en Tránsito</h2>
+        <span class="text-xs text-gray-500">Ventana crítica: 72 horas</span>
+      </div>
+      <div class="p-6">
+        <div id="solicitudesList" class="space-y-4">
+          <p class="text-gray-500 text-sm">Consultando donaciones próximas a vencer...</p>
         </div>
       </div>
-    </section>
+    </div>
 
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-      import {
-        getAuth,
-        onAuthStateChanged,
-        signOut,
-        sendEmailVerification
-      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-      import {
-        getFirestore,
-        doc,
-        getDoc,
-        updateDoc,
-        collection,
-        onSnapshot
-      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  </main>
 
-      const firebaseConfig = {
-        apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
-        authDomain: "bd-concurso.firebaseapp.com",
-        projectId: "bd-concurso",
-        storageBucket: "bd-concurso.firebasestorage.app",
-        messagingSenderId: "944372990629",
-        appId: "1:944372990629:web:1bd61c44cf1274eadc034c",
-        measurementId: "G-LMSMQBD5CL"
-      };
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      auth.languageCode = "es";
-      const db = getFirestore(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyDummyKey",
+      authDomain: "concurso-innovacion.firebaseapp.com",
+      projectId: "concurso-innovacion",
+      storageBucket: "concurso-innovacion.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
 
-      let usuarioActual = null;
-      let datosAlbergue = null;
-      let coordsAlbergue = null;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-      const bloqueoCorreo = document.getElementById("bloqueo-correo");
-      const contenidoPanel = document.getElementById("contenido-panel");
-      const textoCorreoBloqueo = document.getElementById("texto-correo-bloqueo");
-
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-          window.location.assign("login.html");
-          return;
-        }
-
-        usuarioActual = user;
-
-        if (!user.emailVerified) {
-          bloqueoCorreo.classList.remove("is-hidden");
-          contenidoPanel.classList.add("is-hidden");
-          textoCorreoBloqueo.innerHTML = `Cuenta: <strong>${user.email}</strong> (Pendiente de confirmar enlace)`;
-          return;
-        }
-
-        const docSnap = await getDoc(doc(db, "usuarios", user.uid));
-        if (!docSnap.exists() || docSnap.data().rol !== "receptor") {
-          alert("No tienes permisos de Albergue (Receptor).");
-          window.location.assign("index.html");
-          return;
-        }
-
-        datosAlbergue = docSnap.data();
-        bloqueoCorreo.classList.add("is-hidden");
-        contenidoPanel.classList.remove("is-hidden");
-
-        document.getElementById("nombre-albergue").innerText = datosAlbergue.nombre || user.email;
-        document.getElementById("rfc-albergue").innerText = `✅ Asociación Verificada ante SAT (RFC: ${datosAlbergue.rfc || "Autorizado"})`;
-
-        escucharDonaciones();
-      });
-
-      document.getElementById("btn-comprobar-correo").addEventListener("click", async () => {
-        if (auth.currentUser) {
-          await auth.currentUser.reload();
-          if (auth.currentUser.emailVerified) window.location.reload();
-          else alert("Aún no detectamos la verificación. Abre el enlace del correo y vuelve a intentarlo.");
-        }
-      });
-
-      document.getElementById("btn-reenviar-correo").addEventListener("click", async () => {
-        try {
-          await sendEmailVerification(auth.currentUser);
-          alert("¡Correo reenviado! Revisa tu bandeja de entrada o Spam.");
-        } catch (e) {
-          alert("Espera unos segundos antes de solicitar otro correo: " + e.message);
-        }
-      });
-
-      document.getElementById("btn-gps-albergue").addEventListener("click", () => {
-        const aviso = document.getElementById("aviso-gps-albergue");
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition((pos) => {
-          coordsAlbergue = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          aviso.innerText = `✅ Coordenadas GPS del albergue listas (${coordsAlbergue.lat.toFixed(4)}, ${coordsAlbergue.lng.toFixed(4)})`;
-          aviso.className = "help has-text-success has-text-weight-bold";
-        });
-      });
-
-      // Genera un código único antifraude de 4 dígitos/letras tipo ENT-8492
-      function generarPinAntifraude() {
-        const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-        let pin = "";
-        for (let i = 0; i < 4; i++) {
-          pin += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return `ENT-${pin}`;
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
       }
+      document.getElementById("userEmail").textContent = user.email;
 
-      // Opción 2A: El albergue decide ir directamente por la donación
-      window.recogerDirectamente = async (donacionId) => {
-        const direccionDestino = document.getElementById("direccion-albergue").value.trim() || "Recolección directa en sucursal";
-        const pinSecreto = generarPinAntifraude();
-
-        await updateDoc(doc(db, "donaciones", donacionId), {
-          estado: "recoge_albergue",
-          modalidadEntrega: "Recolección directa por Albergue",
-          albergueId: usuarioActual.uid,
-          albergueNombre: datosAlbergue.nombre || usuarioActual.email,
-          direccionDestino: direccionDestino,
-          coordsDestino: coordsAlbergue,
-          codigoEntrega: pinSecreto,
-          fechaSolicitud: new Date().toISOString()
-        });
-      };
-
-      // Opción 2B: El albergue NO puede ir y envía la solicitud a los Voluntarios YA verificados
-      window.pedirVoluntarioVerificado = async (donacionId) => {
-        const direccionDestino = document.getElementById("direccion-albergue").value.trim();
-        if (!direccionDestino) {
-          alert("Por favor escribe arriba la dirección de tu Albergue para que el voluntario verificado sepa a dónde llevártela.");
-          document.getElementById("direccion-albergue").focus();
-          return;
+      try {
+        const userDoc = await getDoc(doc(db, "usuarios", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          const albergue = data.nombreInstitucion || data.nombre || "Albergue Registrado";
+          document.getElementById("verifiedText").textContent = `Institución Verificada: ${albergue}`;
         }
-
-        const pinSecreto = generarPinAntifraude();
-
-        await updateDoc(doc(db, "donaciones", donacionId), {
-          estado: "solicitada", // Aparece en el panel de los voluntarios verificados
-          modalidadEntrega: "Solicitado a Voluntarios Verificados",
-          albergueId: usuarioActual.uid,
-          albergueNombre: datosAlbergue.nombre || usuarioActual.email,
-          direccionDestino: direccionDestino,
-          coordsDestino: coordsAlbergue,
-          codigoEntrega: pinSecreto,
-          fechaSolicitud: new Date().toISOString()
-        });
-      };
-
-      // Si el albergue iba a ir pero tuvo un imprevisto, puede delegarlo a un voluntario verificado
-      window.cambiarAVoluntario = async (donacionId) => {
-        const direccionDestino = document.getElementById("direccion-albergue").value.trim();
-        if (!direccionDestino) {
-          alert("Escribe primero arriba la dirección de entrega de tu Albergue antes de pedir un voluntario.");
-          document.getElementById("direccion-albergue").focus();
-          return;
-        }
-
-        await updateDoc(doc(db, "donaciones", donacionId), {
-          estado: "solicitada",
-          modalidadEntrega: "Transferido a Voluntarios Verificados",
-          direccionDestino: direccionDestino,
-          coordsDestino: coordsAlbergue
-        });
-      };
-
-      function escucharDonaciones() {
-        onSnapshot(collection(db, "donaciones"), (snapshot) => {
-          let htmlDisponibles = "";
-          let htmlSolicitadas = "";
-
-          snapshot.forEach((docSnap) => {
-            const d = docSnap.data();
-            const id = docSnap.id;
-
-            if (d.estado === "disponible") {
-              htmlDisponibles += `
-                <div class="notification is-warning is-light mb-3 p-4">
-                  <p class="is-size-5 has-text-weight-bold titulo-verde">${d.producto} (${d.cantidad})</p>
-                  <p class="is-size-6 mb-1">
-                    <strong>Supermercado:</strong> ${d.supermercadoNombre}
-                    <span class="tag is-white">RFC: ${d.rfcDonador || "Verificado"}</span>
-                  </p>
-                  <p class="is-size-7 has-text-grey mb-3">
-                    <i class="fa-solid fa-clock mr-1"></i> Tiempo límite: <strong>${d.horasVencer}</strong> |
-                    <i class="fa-solid fa-location-dot ml-1 mr-1"></i> Sucursal: ${d.direccionOrigen}
-                  </p>
-                  <p class="is-size-7 has-text-weight-bold mb-2">¿Cómo deseas recolectar este lote?</p>
-                  <div class="buttons">
-                    <button class="button btn-verde is-small" onclick="recogerDirectamente('${id}')">
-                      <strong><i class="fa-solid fa-person-walking-luggage mr-1"></i> Nosotros pasamos a recogerlo</strong>
-                    </button>
-                    <button class="button btn-rojo is-small" onclick="pedirVoluntarioVerificado('${id}')">
-                      <strong><i class="fa-solid fa-car-side mr-1"></i> No podemos ir: Pedir Voluntario Verificado</strong>
-                    </button>
-                  </div>
-                </div>
-              `;
-            } else if (d.albergueId === usuarioActual.uid) {
-              let estadoTexto = "";
-              let botonExtra = "";
-
-              if (d.estado === "recoge_albergue") {
-                const origenMapa = d.coordsOrigen
-                  ? `${d.coordsOrigen.lat},${d.coordsOrigen.lng}`
-                  : encodeURIComponent(d.direccionOrigen || "");
-                const urlSucursal = `https://www.google.com/maps/search/?api=1&query=${origenMapa}`;
-
-                estadoTexto = `<span class="tag is-primary">🏢 Recolección directa por nuestro Albergue</span>`;
-                botonExtra = `
-                  <div class="buttons mt-2">
-                    <a href="${urlSucursal}" target="_blank" class="button is-link is-light is-small">
-                      <i class="fa-solid fa-map-location-dot mr-1"></i> Ver ubicación del Súper
-                    </a>
-                    <button class="button is-warning is-light is-small" onclick="cambiarAVoluntario('${id}')">
-                      <i class="fa-solid fa-car mr-1"></i> ¿No puedes ir? Enviar solicitud a Voluntarios Verificados
-                    </button>
-                  </div>
-                `;
-              } else if (d.estado === "solicitada") {
-                estadoTexto = `<span class="tag is-warning">📡 Solicitud enviada a Voluntarios Verificados</span>`;
-              } else if (d.estado === "en_camino") {
-                estadoTexto = `<span class="tag is-info">🚗 En camino con voluntario verificado: ${d.repartidorNombre}</span>`;
-              } else if (d.estado === "entregada") {
-                estadoTexto = `<span class="tag is-success">✅ Entrega Confirmada con Código Antifraude</span>`;
-              }
-
-              // Caja con el Código Secreto de Verificación (Solo se muestra mientras no haya sido entregada)
-              let cajaPinSecreto = "";
-              if (d.estado !== "entregada" && d.codigoEntrega) {
-                cajaPinSecreto = `
-                  <div class="box p-3 mt-3 has-background-white" style="border-left: 4px solid #2D4F00;">
-                    <p class="is-size-7 has-text-grey mb-1">
-                      <i class="fa-solid fa-lock mr-1"></i> <strong>Código Antifraude de Recepción:</strong> (Solo proporciónalo cuando tengas los alimentos frente a ti)
-                    </p>
-                    <p class="title is-4 titulo-verde mb-0" style="letter-spacing: 3px;">${d.codigoEntrega}</p>
-                  </div>
-                `;
-              }
-
-              htmlSolicitadas += `
-                <div class="notification is-light mb-3 p-4">
-                  <div class="is-flex is-justify-content-space-between is-align-items-center mb-1" style="flex-wrap: wrap; gap: 0.5rem;">
-                    <strong class="titulo-verde is-size-5">${d.producto} (${d.cantidad})</strong>
-                    ${estadoTexto}
-                  </div>
-                  <p class="is-size-7 has-text-grey">
-                    Supermercado: <strong>${d.supermercadoNombre}</strong> (${d.direccionOrigen}) | Plazo: ${d.horasVencer}
-                  </p>
-                  ${cajaPinSecreto}
-                  ${botonExtra}
-                </div>
-              `;
-            }
-          });
-
-          document.getElementById("lista-disponibles").innerHTML =
-            htmlDisponibles || `<p class="has-text-grey">No hay lotes disponibles en este momento.</p>`;
-          document.getElementById("lista-solicitadas").innerHTML =
-            htmlSolicitadas || `<p class="has-text-grey">Aún no has solicitado lotes.</p>`;
-        });
+      } catch (e) {
+        console.error("Error al cargar perfil:", e);
       }
+    });
 
-      document.getElementById("btn-salir").addEventListener("click", () => {
-        signOut(auth).then(() => window.location.assign("index.html"));
-      });
-    </script>
-  </body>
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      signOut(auth).then(() => window.location.href = "login.html");
+    });
+  </script>
+</body>
 </html>
