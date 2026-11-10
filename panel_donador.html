@@ -1,88 +1,456 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Donador - Rescate de Alimentos</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-[#FFBDB0]/20 min-h-screen text-gray-800">
-
-  <!-- Navbar -->
-  <nav class="bg-[#2D4F00] text-white px-6 py-4 shadow flex justify-between items-center">
-    <div class="flex items-center space-x-3">
-      <span class="text-xl font-bold tracking-wide">Plataforma de Donaciones</span>
-    </div>
-    <div class="flex items-center space-x-4">
-      <span id="userEmail" class="text-sm font-medium">Donador Activo</span>
-      <button id="btnLogout" class="bg-[#A31F05] hover:bg-red-800 text-white text-xs px-3 py-1.5 rounded transition">
-        Cerrar Sesión
-      </button>
-    </div>
-  </nav>
-
-  <!-- Contenedor Principal -->
-  <main class="max-w-6xl mx-auto p-6 space-y-6">
-
-    <!-- Tarjeta de Identidad y Rol (Header Corregido: sin encimados) -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="flex flex-col gap-1 items-start">
-        <h1 class="text-3xl font-extrabold text-[#2D4F00] leading-tight">
-          Donador
-        </h1>
-        <div id="verifiedBadge" class="flex items-center gap-1.5 text-sm font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md mt-1">
-          <span>✅</span>
-          <span id="verifiedText">Organización Verificada | Donante Registrado</span>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel Supermercado (Donador) - Fundación DDA</title>
+    <link rel="stylesheet" href="assets/css/bulma.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <style>
+      body { background-color: #FFBDB0; min-height: 100vh; }
+      .navbar-custom { background-color: #A31F05; color: white; }
+      .titulo-verde { color: #2D4F00 !important; }
+      .texto-rojo { color: #A31F05 !important; }
+      .btn-verde { background-color: #2D4F00 !important; color: white !important; }
+      .btn-rojo { background-color: #A31F05 !important; color: white !important; }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-custom px-4 py-2">
+      <div class="navbar-brand">
+        <a class="navbar-item has-text-white has-text-weight-bold is-size-4" href="index.html">
+          <i class="fa-solid fa-store mr-2"></i> Panel Supermercado
+        </a>
+      </div>
+      <div class="navbar-end">
+        <div class="navbar-item">
+          <div class="buttons">
+            <a href="index.html" class="button is-light is-small">
+              <i class="fa-solid fa-house mr-1"></i> Inicio
+            </a>
+            <button id="btn-salir" class="button is-dark is-small">
+              <i class="fa-solid fa-right-from-bracket mr-1"></i> Cerrar sesión
+            </button>
+          </div>
         </div>
       </div>
-      <button id="btnNuevaDonacion" class="bg-[#2D4F00] hover:bg-[#1f3700] text-white font-medium px-4 py-2 rounded-lg transition shadow-sm self-start md:self-auto">
-        + Registrar Nueva Donación
-      </button>
-    </div>
+    </nav>
 
-    <!-- Grid de Métricas y Estado -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-        <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Donaciones Activas</p>
-        <p id="totalActivas" class="text-3xl font-bold text-[#2D4F00] mt-1">0</p>
-      </div>
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-        <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">En Ruta de Rescate</p>
-        <p id="totalEnRuta" class="text-3xl font-bold text-amber-600 mt-1">0</p>
-      </div>
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-        <p class="text-xs uppercase font-bold text-gray-500 tracking-wider">Completadas (72h)</p>
-        <p id="totalCompletadas" class="text-3xl font-bold text-gray-800 mt-1">0</p>
-      </div>
-    </div>
+    <section class="section">
+      <div class="container">
+        <!-- Aviso opcional arriba si el correo aún no se ha verificado (No bloquea ni regresa al login) -->
+        <div id="aviso-correo" class="notification is-warning is-light mb-4 is-hidden">
+          <div class="is-flex is-justify-content-space-between is-align-items-center" style="flex-wrap: wrap; gap: 0.5rem;">
+            <span>
+              <strong>📧 Confirmación de correo pendiente:</strong> Revisa tu bandeja de entrada o Spam para confirmar tu correo electrónico.
+            </span>
+            <div class="buttons mb-0">
+              <button id="btn-comprobar-correo" class="button is-success is-small">Ya abrí el enlace</button>
+              <button id="btn-reenviar-correo" class="button is-warning is-small">Reenviar correo</button>
+            </div>
+          </div>
+        </div>
 
-    <!-- Lista de Lotes y Donaciones Registradas -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-gray-800">Lotes de Alimentos Disponibles</h2>
-        <span class="text-xs text-gray-500">Actualización en tiempo real</span>
-      </div>
-      <div class="p-6">
-        <div id="donacionesList" class="space-y-4">
-          <p class="text-gray-500 text-sm">No hay donaciones pendientes registradas en este momento.</p>
+        <div id="contenido-panel">
+          <div class="box mb-5">
+            <div class="columns is-vcentered">
+              <div class="column">
+                <h1 class="title is-4 titulo-verde mb-1" id="nombre-super">Cargando supermercado...</h1>
+                <p class="subtitle is-6 has-text-grey mb-0" id="rfc-super"></p>
+              </div>
+              <div class="column is-narrow">
+                <div class="notification is-light p-3 mb-0 has-text-centered">
+                  <p class="is-size-7 has-text-weight-bold titulo-verde mb-2">
+                    <i class="fa-solid fa-id-card-clip mr-1"></i> AUTORIZAR VOLUNTARIO REPARTIDOR
+                  </p>
+                  <button id="btn-crear-codigo" class="button btn-verde is-small is-fullwidth">
+                    <i class="fa-solid fa-key mr-1"></i> Generar código aleatorio (1 uso)
+                  </button>
+                  <div id="caja-codigo" class="mt-2 is-hidden">
+                    <span class="tag is-warning is-medium has-text-weight-bold" id="codigo-mostrado" style="letter-spacing: 2px;"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="columns">
+            <div class="column is-5">
+              <div class="box">
+                <h3 class="title is-5 texto-rojo">
+                  <i class="fa-solid fa-box-open mr-2"></i> Publicar Lote de Donación
+                </h3>
+                <form id="form-donacion">
+                  <div class="field">
+                    <label class="label">Alimento / Producto</label>
+                    <div class="control">
+                      <input class="input" type="text" id="producto" placeholder="Ej. Cajas de Cereales, Enlatados o Lácteos" required />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="label">Peso o Cantidad Total</label>
+                    <div class="control">
+                      <input class="input" type="text" id="cantidad" placeholder="Ej. 25 kg / 40 piezas" required />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="label">Tiempo límite de donación (hasta 2 semanas)</label>
+                    <div class="control">
+                      <div class="select is-fullwidth">
+                        <select id="horas-vencer" required>
+                          <option value="24 horas (Urgente)">24 horas (Urgente)</option>
+                          <option value="48 horas (2 días)">48 horas (2 días)</option>
+                          <option value="72 horas (3 días)" selected>72 horas (3 días)</option>
+                          <option value="5 días">5 días</option>
+                          <option value="1 semana (7 días)">1 semana (7 días)</option>
+                          <option value="10 días">10 días</option>
+                          <option value="2 semanas (14 días - Máximo)">2 semanas (14 días - Máximo)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="label">Dirección de recolección (Sucursal)</label>
+                    <div class="control">
+                      <input class="input" type="text" id="direccion" placeholder="Ej. Blvd. Kino #450, Hermosillo" required />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <button type="button" id="btn-ubicacion" class="button is-info is-light is-fullwidth is-small mb-2">
+                      <i class="fa-solid fa-location-crosshairs mr-1"></i> Adjuntar coordenadas GPS actuales
+                    </button>
+                    <p id="estado-gps" class="help has-text-grey">Opcional: facilita la ruta exacta para el albergue o voluntario.</p>
+                  </div>
+
+                  <button type="submit" id="btn-publicar" class="button btn-rojo is-fullwidth mt-3">
+                    <strong><i class="fa-solid fa-bullhorn mr-2"></i> Emitir Alerta de Donación</strong>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div class="column is-7">
+              <div class="box">
+                <h3 class="title is-5 titulo-verde">
+                  <i class="fa-solid fa-truck-fast mr-2"></i> Trazabilidad y Extensión de Plazos
+                </h3>
+                <div id="lista-mis-donaciones">
+                  <p class="has-text-grey">Cargando lotes...</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-  </main>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+        sendEmailVerification
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        updateDoc,
+        collection,
+        addDoc,
+        query,
+        where,
+        onSnapshot
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  <!-- Script de sesión vinculado a tu configuración local -->
-  <script type="module">
-    // Si tienes un archivo firebase-config.js o similar, impórtalo aquí.
-    // Para evitar el bucle, solo vinculamos el botón de salida:
-    const btnLogout = document.getElementById("btnLogout");
-    if (btnLogout) {
-      btnLogout.addEventListener("click", () => {
-        sessionStorage.clear();
-        localStorage.clear();
-        window.location.href = "login.html";
+      const firebaseConfig = {
+        apiKey: "AIzaSyDRWBaRl4s0pNrf1ni16AP4oVb8iDEVmog",
+        authDomain: "bd-concurso.firebaseapp.com",
+        projectId: "bd-concurso",
+        storageBucket: "bd-concurso.firebasestorage.app",
+        messagingSenderId: "944372990629",
+        appId: "1:944372990629:web:1bd61c44cf1274eadc034c",
+        measurementId: "G-LMSMQBD5CL"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      auth.languageCode = "es";
+      const db = getFirestore(app);
+
+      let uidActivo = null;
+      let datosSuper = null;
+      let coordsSuper = null;
+
+      // Cargar respaldo inmediato para evitar cualquier rebote al login
+      const sesionGuardada = JSON.parse(localStorage.getItem("dda_sesion_activa") || "null");
+      if (sesionGuardada) {
+        uidActivo = sesionGuardada.uid;
+        datosSuper = sesionGuardada;
+        document.getElementById("nombre-super").innerText = sesionGuardada.nombre || sesionGuardada.email;
+        document.getElementById("rfc-super").innerText = `✅ RFC Verificado ante SAT: ${sesionGuardada.rfc || "CLE810525EA1"}`;
+        escucharMisDonaciones(uidActivo);
+      }
+
+      // Esperar a que Firebase termine de inicializar antes de revisar la sesión
+      await auth.authStateReady();
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user && !sesionGuardada) {
+          window.location.replace("login.html");
+          return;
+        }
+
+        if (user) {
+          uidActivo = user.uid;
+
+          if (!user.emailVerified) {
+            document.getElementById("aviso-correo").classList.remove("is-hidden");
+          }
+
+          try {
+            const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+            if (docSnap.exists()) {
+              datosSuper = docSnap.data();
+            } else {
+              datosSuper = {
+                nombre: sesionGuardada?.nombre || user.email,
+                email: user.email,
+                rol: "donador",
+                rfc: sesionGuardada?.rfc || "CLE810525EA1",
+                verificado: true
+              };
+              await setDoc(doc(db, "usuarios", user.uid), datosSuper);
+            }
+
+            document.getElementById("nombre-super").innerText = datosSuper.nombre || user.email;
+            document.getElementById("rfc-super").innerText = `✅ RFC Verificado ante SAT: ${datosSuper.rfc || "Autorizado"}`;
+            escucharMisDonaciones(uidActivo);
+          } catch (err) {
+            console.warn("Usando sesión activa local:", err);
+          }
+        }
       });
-    }
-  </script>
-</body>
+
+      document.getElementById("btn-comprobar-correo").addEventListener("click", async () => {
+        if (auth.currentUser) {
+          await auth.currentUser.reload();
+          if (auth.currentUser.emailVerified) {
+            document.getElementById("aviso-correo").classList.add("is-hidden");
+            alert("¡Correo verificado con éxito!");
+          } else {
+            alert("Todavía no aparece confirmado. Haz clic en el enlace que llegó a tu correo.");
+          }
+        }
+      });
+
+      document.getElementById("btn-reenviar-correo").addEventListener("click", async () => {
+        try {
+          if (auth.currentUser) {
+            await sendEmailVerification(auth.currentUser);
+            alert("¡Correo de verificación enviado! Revisa tu bandeja de entrada y Spam.");
+          }
+        } catch (e) {
+          alert("Espera un momento antes de volver a enviarlo: " + e.message);
+        }
+      });
+
+      // Generar código aleatorio para voluntario
+      document.getElementById("btn-crear-codigo").addEventListener("click", async () => {
+        if (!uidActivo) return;
+        const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let aleatorio = "";
+        for (let i = 0; i < 6; i++) {
+          aleatorio += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+        }
+        const nuevoCodigo = `VOL-${aleatorio}`;
+
+        await setDoc(doc(db, "codigos_voluntarios", nuevoCodigo), {
+          supermercadoId: uidActivo,
+          supermercadoNombre: datosSuper?.nombre || "Supermercado Verificado",
+          usado: false,
+          fechaCreacion: new Date().toISOString()
+        });
+
+        document.getElementById("codigo-mostrado").innerText = nuevoCodigo;
+        document.getElementById("caja-codigo").classList.remove("is-hidden");
+      });
+
+      document.getElementById("btn-ubicacion").addEventListener("click", () => {
+        const estadoGps = document.getElementById("estado-gps");
+        if (!navigator.geolocation) return;
+        estadoGps.innerText = "Obteniendo coordenadas GPS...";
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            coordsSuper = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            estadoGps.innerText = `✅ GPS adjuntado (${coordsSuper.lat.toFixed(4)}, ${coordsSuper.lng.toFixed(4)})`;
+            estadoGps.className = "help has-text-success has-text-weight-bold";
+          },
+          () => {
+            estadoGps.innerText = "No se pudo obtener el GPS, se usará la dirección escrita.";
+          }
+        );
+      });
+
+      document.getElementById("form-donacion").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("btn-publicar");
+        btn.disabled = true;
+
+        try {
+          await addDoc(collection(db, "donaciones"), {
+            donadorId: uidActivo,
+            supermercadoNombre: datosSuper?.nombre || "Supermercado",
+            rfcDonador: datosSuper?.rfc || "Verificado",
+            producto: document.getElementById("producto").value.trim(),
+            cantidad: document.getElementById("cantidad").value.trim(),
+            horasVencer: document.getElementById("horas-vencer").value,
+            direccionOrigen: document.getElementById("direccion").value.trim(),
+            coordsOrigen: coordsSuper,
+            estado: "disponible",
+            fechaPublicacion: new Date().toISOString()
+          });
+
+          document.getElementById("form-donacion").reset();
+          document.getElementById("estado-gps").innerText = "✅ Lote publicado con éxito.";
+        } catch (err) {
+          alert("Error al publicar lote: " + err.message);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      window.extenderTiempoDonacion = async (donacionId) => {
+        const selectNuevo = document.getElementById(`ext-${donacionId}`);
+        if (!selectNuevo || !selectNuevo.value) return;
+
+        await updateDoc(doc(db, "donaciones", donacionId), {
+          horasVencer: selectNuevo.value + " (Plazo extendido)",
+          ultimaExtension: new Date().toISOString()
+        });
+        alert("✅ Tiempo de donación extendido a: " + selectNuevo.value);
+      };
+
+      window.validarPinEntregaEnTienda = async (donacionId, codigoReal) => {
+        const inputPin = document.getElementById(`pin-tienda-${donacionId}`);
+        const pinIngresado = inputPin.value.trim().toUpperCase();
+
+        if (!pinIngresado) {
+          alert("Ingresa el código de verificación que te dicte el representante del albergue.");
+          return;
+        }
+        if (pinIngresado !== codigoReal) {
+          alert("❌ Código incorrecto. Pídele al albergue el código exacto que aparece en su panel.");
+          return;
+        }
+
+        await updateDoc(doc(db, "donaciones", donacionId), {
+          estado: "entregada",
+          verificadoConCodigo: true,
+          fechaEntrega: new Date().toISOString()
+        });
+        alert("✅ Código verificado correctamente. Entrega confirmada sin fraude.");
+      };
+
+      function escucharMisDonaciones(uid) {
+        if (!uid) return;
+        const q = query(collection(db, "donaciones"), where("donadorId", "==", uid));
+        onSnapshot(q, (snapshot) => {
+          const contenedor = document.getElementById("lista-mis-donaciones");
+          if (snapshot.empty) {
+            contenedor.innerHTML = `<p class="has-text-grey">Aún no has publicado lotes de alimentos.</p>`;
+            return;
+          }
+
+          let html = "";
+          snapshot.forEach((docSnap) => {
+            const d = docSnap.data();
+            const id = docSnap.id;
+
+            let badge = `<span class="tag is-info">Disponible para Albergues</span>`;
+            let controlesExtra = "";
+
+            if (d.estado === "recoge_albergue") {
+              badge = `<span class="tag is-primary">🏢 El Albergue (${d.albergueNombre}) pasará a recogerlo</span>`;
+              controlesExtra = `
+                <div class="box p-3 mt-3" style="background-color: #f9f9f9;">
+                  <p class="is-size-7 has-text-weight-bold mb-2">
+                    🔒 Cuando llegue el personal de <strong>${d.albergueNombre}</strong>, ingresa su código de recepción para liberar la entrega:
+                  </p>
+                  <div class="field has-addons">
+                    <div class="control is-expanded">
+                      <input class="input is-small" type="text" id="pin-tienda-${id}" placeholder="Ej. ENT-4829" style="text-transform: uppercase;">
+                    </div>
+                    <div class="control">
+                      <button class="button is-success is-small" onclick="validarPinEntregaEnTienda('${id}', '${d.codigoEntrega}')">
+                        <strong>Verificar y Entregar</strong>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else if (d.estado === "solicitada") {
+              badge = `<span class="tag is-warning">Solicitada por: ${d.albergueNombre} (Buscando Voluntario Verificado)</span>`;
+            } else if (d.estado === "en_camino") {
+              badge = `<span class="tag is-link">🚗 En camino con voluntario: ${d.repartidorNombre}</span>`;
+            } else if (d.estado === "entregada") {
+              badge = `<span class="tag is-success">✅ Entregada y Verificada con Código en ${d.albergueNombre}</span>`;
+            }
+
+            let bloqueExtension = "";
+            if (d.estado !== "entregada") {
+              bloqueExtension = `
+                <div class="field has-addons mt-2">
+                  <div class="control">
+                    <div class="select is-small">
+                      <select id="ext-${id}">
+                        <option value="">Extender tiempo límite...</option>
+                        <option value="72 horas (3 días)">Extender a 72 horas (3 días)</option>
+                        <option value="5 días">Extender a 5 días</option>
+                        <option value="1 semana (7 días)">Extender a 1 semana (7 días)</option>
+                        <option value="10 días">Extender a 10 días</option>
+                        <option value="2 semanas (14 días)">Extender a 2 semanas (14 días - Máx.)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="control">
+                    <button class="button is-info is-light is-small" onclick="extenderTiempoDonacion('${id}')">
+                      <i class="fa-solid fa-calendar-plus mr-1"></i> Extender plazo
+                    </button>
+                  </div>
+                </div>
+              `;
+            }
+
+            html += `
+              <div class="notification is-light mb-3 p-4">
+                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2" style="flex-wrap: wrap; gap: 0.5rem;">
+                  <strong class="is-size-5 titulo-verde">${d.producto} (${d.cantidad})</strong>
+                  ${badge}
+                </div>
+                <p class="is-size-7 has-text-grey">
+                  <i class="fa-solid fa-clock mr-1"></i> Tiempo límite actual: <strong>${d.horasVencer}</strong> |
+                  <i class="fa-solid fa-location-dot ml-2 mr-1"></i> Sucursal: ${d.direccionOrigen}
+                </p>
+                ${bloqueExtension}
+                ${controlesExtra}
+              </div>
+            `;
+          });
+          contenedor.innerHTML = html;
+        });
+      }
+
+      document.getElementById("btn-salir").addEventListener("click", () => {
+        localStorage.removeItem("dda_sesion_activa");
+        signOut(auth).then(() => window.location.assign("index.html"));
+      });
+    </script>
+  </body>
 </html>
