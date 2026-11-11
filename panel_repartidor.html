@@ -12,7 +12,6 @@
       .titulo-verde { color: #2D4F00 !important; }
       .texto-rojo { color: #A31F05 !important; }
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
-      /* Evita que Bulma encime los subtítulos sobre los títulos */
       .title + .subtitle { margin-top: 0.35rem !important; }
     </style>
   </head>
@@ -39,22 +38,24 @@
 
     <section class="section">
       <div class="container">
-        <div id="aviso-correo" class="notification is-warning is-light mb-4 is-hidden">
-          <div class="is-flex is-justify-content-space-between is-align-items-center" style="flex-wrap: wrap; gap: 0.5rem;">
-            <span>
-              <strong>📧 Confirmación de correo pendiente:</strong> Revisa tu bandeja de entrada o Spam para confirmar tu correo.
-            </span>
-            <div class="buttons mb-0">
-              <button id="btn-comprobar-correo" class="button is-success is-small">Ya abrí el enlace</button>
-              <button id="btn-reenviar-correo" class="button is-warning is-small">Reenviar correo</button>
-            </div>
-          </div>
-        </div>
-
         <div id="contenido-panel">
+          <!-- Tarjeta de identificación del Voluntario para presentar en los Supermercados -->
           <div class="box mb-5">
-            <h1 class="title is-4 titulo-verde mb-2" id="nombre-voluntario">Cargando voluntario...</h1>
-            <p class="is-size-6 has-text-grey mt-1 mb-0" id="detalle-codigo"></p>
+            <div class="columns is-vcentered">
+              <div class="column">
+                <h1 class="title is-4 titulo-verde mb-2" id="nombre-voluntario">Cargando voluntario...</h1>
+                <p class="is-size-6 has-text-grey mt-1 mb-0" id="detalle-codigo"></p>
+              </div>
+              <div class="column is-narrow">
+                <div class="notification is-warning is-light p-3 mb-0 has-text-centered">
+                  <p class="is-size-7 has-text-weight-bold texto-rojo">
+                    🔑 TU CÓDIGO PARA RECOGER EN SÚPER:
+                  </p>
+                  <p class="title is-4 titulo-verde mt-1 mb-0" id="mi-codigo-mostrado" style="letter-spacing: 2px;">VOL-ACTIVO</p>
+                  <p class="is-size-7 has-text-grey">Muestra este código al supermercado para que te entreguen el lote.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="columns">
@@ -72,7 +73,7 @@
             <div class="column is-6">
               <div class="box">
                 <h3 class="title is-5 titulo-verde">
-                  <i class="fa-solid fa-shield-check mr-2"></i> Mis Entregas y Confirmación Antifraude
+                  <i class="fa-solid fa-shield-check mr-2"></i> Mis Entregas (Paso 1: Súper → Paso 2: Albergue)
                 </h3>
                 <div id="lista-mis-viajes">
                   <p class="has-text-grey">Aún no has tomado ningún traslado.</p>
@@ -86,20 +87,9 @@
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
       import {
-        getAuth,
-        onAuthStateChanged,
-        signOut,
-        sendEmailVerification
-      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-      import {
-        getFirestore,
-        doc,
-        getDoc,
-        setDoc,
-        updateDoc,
-        collection,
-        onSnapshot
+        getFirestore, doc, getDoc, updateDoc, collection, onSnapshot
       } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -114,7 +104,6 @@
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
-      auth.languageCode = "es";
       const db = getFirestore(app);
 
       let uidActivo = null;
@@ -125,8 +114,9 @@
         uidActivo = sesionGuardada.uid;
         datosVoluntario = sesionGuardada;
         document.getElementById("nombre-voluntario").innerText = sesionGuardada.nombre || sesionGuardada.email;
+        document.getElementById("mi-codigo-mostrado").innerText = sesionGuardada.codigoUsado || "VOL-VERIFICADO";
         document.getElementById("detalle-codigo").innerText =
-          `✅ Voluntario Verificado (Código: ${sesionGuardada.codigoUsado || "Activo"}) | Avalado por: ${sesionGuardada.supermercadoNombre || "Supermercado Donador"}`;
+          `✅ Avalado en la red de supermercados por: ${sesionGuardada.supermercadoNombre || "Supermercado Donador"}`;
         escucharViajes();
       }
 
@@ -137,84 +127,38 @@
           window.location.replace("login.html");
           return;
         }
-
         if (user) {
           uidActivo = user.uid;
-
-          if (!user.emailVerified) {
-            document.getElementById("aviso-correo").classList.remove("is-hidden");
-          }
-
-          try {
-            const docSnap = await getDoc(doc(db, "usuarios", user.uid));
-            if (docSnap.exists()) {
-              datosVoluntario = docSnap.data();
-            } else {
-              datosVoluntario = {
-                nombre: sesionGuardada?.nombre || user.email,
-                email: user.email,
-                rol: "repartidor",
-                codigoUsado: sesionGuardada?.codigoUsado || "VOL-ACTIVO",
-                supermercadoNombre: sesionGuardada?.supermercadoNombre || "Supermercado Verificado",
-                verificado: true
-              };
-              await setDoc(doc(db, "usuarios", user.uid), datosVoluntario);
-            }
-
+          const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+          if (docSnap.exists()) {
+            datosVoluntario = docSnap.data();
             document.getElementById("nombre-voluntario").innerText = datosVoluntario.nombre || user.email;
+            document.getElementById("mi-codigo-mostrado").innerText = datosVoluntario.codigoUsado || "VOL-VERIFICADO";
             document.getElementById("detalle-codigo").innerText =
-              `✅ Voluntario Verificado (Código: ${datosVoluntario.codigoUsado || "Activo"}) | Avalado por: ${datosVoluntario.supermercadoNombre || "Supermercado Donador"}`;
-            escucharViajes();
-          } catch (err) {
-            console.warn("Usando sesión activa local:", err);
+              `✅ Avalado en la red de supermercados por: ${datosVoluntario.supermercadoNombre || "Supermercado Donador"}`;
           }
+          escucharViajes();
         }
       });
 
-      document.getElementById("btn-comprobar-correo").addEventListener("click", async () => {
-        if (auth.currentUser) {
-          await auth.currentUser.reload();
-          if (auth.currentUser.emailVerified) {
-            document.getElementById("aviso-correo").classList.add("is-hidden");
-            alert("¡Correo confirmado!");
-          } else {
-            alert("Aún no detectamos la verificación. Abre el enlace del correo.");
-          }
-        }
-      });
-
-      document.getElementById("btn-reenviar-correo").addEventListener("click", async () => {
-        try {
-          if (auth.currentUser) {
-            await sendEmailVerification(auth.currentUser);
-            alert("¡Correo reenviado! Revisa tu bandeja de entrada o Spam.");
-          }
-        } catch (e) {
-          alert("Espera unos segundos antes de solicitar otro correo: " + e.message);
-        }
-      });
-
+      // Al aceptar ir por la comida, avisa al Súper que el voluntario va hacia la tienda
       window.aceptarViaje = async (donacionId) => {
         await updateDoc(doc(db, "donaciones", donacionId), {
-          estado: "en_camino",
+          estado: "voluntario_en_tienda",
           repartidorId: uidActivo,
           repartidorNombre: datosVoluntario?.nombre || "Voluntario Verificado",
-          fechaRecoleccion: new Date().toISOString()
+          codigoVoluntario: datosVoluntario?.codigoUsado || "VOL-VERIFICADO",
+          fechaAceptacion: new Date().toISOString()
         });
       };
 
-      window.confirmarEntregaConPin = async (donacionId, codigoReal) => {
+      // Paso 2 Antifraude: Cuando el voluntario llega al Albergue, mete el código ALB-XXXX del Albergue
+      window.confirmarEntregaEnAlbergue = async (donacionId, codigoAlbergueReal) => {
         const inputPin = document.getElementById(`pin-entrega-${donacionId}`);
         const pinIngresado = inputPin.value.trim().toUpperCase();
 
-        if (!pinIngresado) {
-          alert("Por favor ingresa el código de verificación de entrega que aparece en el panel del Albergue.");
-          inputPin.focus();
-          return;
-        }
-
-        if (pinIngresado !== codigoReal) {
-          alert("❌ Código de verificación incorrecto. Pídele al encargado del Albergue el código exacto que aparece en su pantalla (ej. ENT-XXXX).");
+        if (pinIngresado !== codigoAlbergueReal) {
+          alert("❌ Código incorrecto. Pídele al encargado del Albergue el código ALB-XXXX que aparece en su pantalla.");
           return;
         }
 
@@ -224,7 +168,7 @@
           fechaEntrega: new Date().toISOString()
         });
 
-        alert("✅ ¡Código confirmado! La entrega quedó registrada con éxito y sin fraude.");
+        alert("✅ ¡Código del Albergue confirmado! Entrega finalizada con éxito y sin fraude.");
       };
 
       function escucharViajes() {
@@ -266,13 +210,21 @@
                 </div>
               `;
             } else if (d.repartidorId === uidActivo) {
-              let bloqueConfirmacion = "";
+              let bloquePasoActual = "";
 
-              if (d.estado === "en_camino") {
-                bloqueConfirmacion = `
+              if (d.estado === "voluntario_en_tienda") {
+                bloquePasoActual = `
+                  <div class="notification is-warning p-3 mt-3 mb-0">
+                    <p class="is-size-7">
+                      <strong>📍 PASO 1 (En el Supermercado):</strong> Preséntate en <strong>${d.supermercadoNombre}</strong> y dale tu código <strong>${datosVoluntario?.codigoUsado || "VOL"}</strong> al encargado para que verifique tu identidad y libere el paquete.
+                    </p>
+                  </div>
+                `;
+              } else if (d.estado === "en_camino") {
+                bloquePasoActual = `
                   <div class="box p-3 mt-3" style="background-color: #ffffff;">
-                    <label class="label is-size-7 texto-rojo mb-1">
-                      🔒 Ingresa el Código de Recepción del Albergue para confirmar que entregaste la donación:
+                    <label class="label is-size-7 titulo-verde mb-1">
+                      📍 PASO 2 (En el Albergue): Ingresa el código (ALB-XXXX) que te dicte el Albergue al recibir la comida:
                     </label>
                     <div class="field has-addons">
                       <div class="control is-expanded">
@@ -280,25 +232,25 @@
                           class="input is-small"
                           type="text"
                           id="pin-entrega-${id}"
-                          placeholder="Ej. ENT-8492"
+                          placeholder="Ej. ALB-4829"
                           style="text-transform: uppercase;"
                         />
                       </div>
                       <div class="control">
                         <button
                           class="button is-success is-small"
-                          onclick="confirmarEntregaConPin('${id}', '${d.codigoEntrega}')"
+                          onclick="confirmarEntregaEnAlbergue('${id}', '${d.codigoEntrega}')"
                         >
-                          <strong><i class="fa-solid fa-check-double mr-1"></i> Verificar y Finalizar</strong>
+                          <strong><i class="fa-solid fa-check-double mr-1"></i> Confirmar Entrega</strong>
                         </button>
                       </div>
                     </div>
                   </div>
                 `;
               } else if (d.estado === "entregada") {
-                bloqueConfirmacion = `
+                bloquePasoActual = `
                   <div class="mt-2">
-                    <span class="tag is-success is-medium">✅ Entrega Verificada con Código Antifraude (${d.codigoEntrega || "OK"})</span>
+                    <span class="tag is-success is-medium">✅ Entrega Verificada en Súper y en Albergue (${d.codigoEntrega})</span>
                   </div>
                 `;
               }
@@ -313,14 +265,14 @@
                   <a href="${urlMaps}" target="_blank" class="button is-link is-light is-small">
                     <i class="fa-solid fa-location-arrow mr-1"></i> Abrir GPS en Google Maps
                   </a>
-                  ${bloqueConfirmacion}
+                  ${bloquePasoActual}
                 </div>
               `;
             }
           });
 
           document.getElementById("lista-pendientes").innerHTML =
-            htmlPendientes || `<p class="has-text-grey">No hay solicitudes pendientes. Cuando un albergue no pueda ir por un lote y solicite un voluntario verificado, aparecerá aquí.</p>`;
+            htmlPendientes || `<p class="has-text-grey">No hay solicitudes pendientes en este momento.</p>`;
           document.getElementById("lista-mis-viajes").innerHTML =
             htmlMisViajes || `<p class="has-text-grey">Aún no has tomado ningún traslado.</p>`;
         });
