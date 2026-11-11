@@ -14,6 +14,19 @@
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
       .btn-rojo { background-color: #A31F05 !important; color: white !important; }
       .title + .subtitle { margin-top: 0.35rem !important; }
+      details.faq-item {
+        background: #fafafa;
+        border-radius: 6px;
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid #A31F05;
+        cursor: pointer;
+      }
+      details.faq-item summary {
+        font-weight: 700;
+        color: #2D4F00;
+        outline: none;
+      }
     </style>
   </head>
   <body>
@@ -40,6 +53,7 @@
     <section class="section">
       <div class="container">
         <div id="contenido-panel">
+          <!-- Cabecera de Supermercado -->
           <div class="box mb-5">
             <div class="columns is-vcentered">
               <div class="column">
@@ -64,6 +78,7 @@
           </div>
 
           <div class="columns">
+            <!-- Publicar Lote -->
             <div class="column is-5">
               <div class="box">
                 <h3 class="title is-5 texto-rojo">
@@ -122,6 +137,7 @@
               </div>
             </div>
 
+            <!-- Control de Entregas -->
             <div class="column is-7">
               <div class="box">
                 <h3 class="title is-5 titulo-verde">
@@ -132,6 +148,43 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- APARTADO DE PREGUNTAS FRECUENTES (EXCLUSIVO PARA SUPERMERCADOS) -->
+          <div class="box mt-5">
+            <h3 class="title is-5 titulo-verde mb-4">
+              <i class="fa-solid fa-circle-question texto-rojo mr-2"></i> Preguntas Frecuentes — Guía para Supermercados Nuevos
+            </h3>
+
+            <details class="faq-item">
+              <summary>1. ¿Para qué sirve el botón "Generar código de voluntario"?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                Genera un código único (ej. <code>VOL-8F3K9A</code>) para que una persona de confianza pueda registrarse como voluntario repartidor en la plataforma. Además, ese mismo código funciona como su credencial: cuando un voluntario venga a tu sucursal a recoger comida, deberá dictarte su código para que compruebes que está autorizado antes de entregarle las cajas.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>2. ¿Cómo sé si por la donación vendrá directamente el Albergue o un Voluntario?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                En tu panel derecho verás una etiqueta de estado en tiempo real:
+                <br>• Si dice <strong>"El Albergue pasará a sucursal"</strong>, el personal del comedor vendrá directamente y te dará un código que empieza con <code>ALB-XXXX</code>.
+                <br>• Si el albergue no tiene transporte y pide apoyo, verás qué voluntario aceptó el traslado y el sistema te pedirá validar su código <code>VOL-XXXXXX</code> en mostrador.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>3. ¿Qué hago si un alimento sigue en buen estado y quiero darle más días antes de que venza?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                No necesitas borrar ni volver a publicar el lote. Debajo de cada donación activa encontrarás un menú desplegable para <strong>Extender el tiempo límite</strong> desde 72 horas hasta un máximo de <strong>2 semanas (14 días)</strong>.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>4. ¿Cómo queda comprobado que la donación sí llegó al albergue y dónde veo la hora de entrega?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                Ningún lote se marca como entregado hasta que se ingresa el código antifraude del albergue receptor (<code>ALB-XXXX</code>). En cuanto se valida, la tarjeta del lote cambia a color verde y muestra automáticamente el sello con la <strong>fecha y hora exacta de recepción</strong> para tu control de inventario.
+              </p>
+            </details>
           </div>
         </div>
       </div>
@@ -162,6 +215,19 @@
       let datosSuper = null;
       let coordsSuper = null;
 
+      function formatearFechaHora(isoString) {
+        if (!isoString) return "";
+        const fecha = new Date(isoString);
+        return fecha.toLocaleString("es-MX", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
+
       const sesionGuardada = JSON.parse(localStorage.getItem("dda_sesion_activa") || "null");
       if (sesionGuardada) {
         uidActivo = sesionGuardada.uid;
@@ -190,7 +256,6 @@
         }
       });
 
-      // Generar código de identificación para voluntario (Compartido en la red de supermercados)
       document.getElementById("btn-crear-codigo").addEventListener("click", async () => {
         if (!uidActivo) return;
         const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -255,7 +320,6 @@
         alert("✅ Tiempo límite extendido a: " + selectNuevo.value);
       };
 
-      // CASO A: El Albergue fue en persona al Súper -> El Súper ingresa el código ALB-XXXX del Albergue
       window.verificarRecoleccionDeAlbergue = async (donacionId, codigoAlbergueReal) => {
         const input = document.getElementById(`pin-albergue-${donacionId}`);
         const ingresado = input.value.trim().toUpperCase();
@@ -273,7 +337,6 @@
         alert("✅ Código del Albergue verificado. ¡Donación entregada con éxito!");
       };
 
-      // CASO B: Va un Voluntario al Súper -> El Súper le pide su código VOL-XXXX para comprobar que es un voluntario real antes de darle la comida
       window.verificarVoluntarioEnTienda = async (donacionId, codigoVoluntarioEsperado) => {
         const input = document.getElementById(`pin-vol-${donacionId}`);
         const ingresado = input.value.trim().toUpperCase();
@@ -283,7 +346,6 @@
           return;
         }
 
-        // Verifica que coincida con el código del voluntario asignado o que exista en el padrón global de voluntarios
         const docCodigo = await getDoc(doc(db, "codigos_voluntarios", ingresado));
         if (ingresado !== codigoVoluntarioEsperado && !docCodigo.exists()) {
           alert("❌ Ese código no pertenece a ningún voluntario autorizado por los supermercados. No entregues el lote.");
@@ -316,6 +378,7 @@
 
             let badge = `<span class="tag is-info">Disponible para Albergues</span>`;
             let controlesVerificacion = "";
+            let infoFechaEntrega = "";
 
             if (d.estado === "recoge_albergue") {
               badge = `<span class="tag is-primary">🏢 El Albergue (${d.albergueNombre}) pasará a sucursal</span>`;
@@ -360,7 +423,14 @@
             } else if (d.estado === "en_camino") {
               badge = `<span class="tag is-link">🚗 Voluntario Verificado en tienda (${d.repartidorNombre}) -> En camino al Albergue</span>`;
             } else if (d.estado === "entregada") {
-              badge = `<span class="tag is-success">✅ Entregada y Confirmada con Código en ${d.albergueNombre}</span>`;
+              badge = `<span class="tag is-success">✅ Entregada y Confirmada en ${d.albergueNombre}</span>`;
+              if (d.fechaEntrega) {
+                infoFechaEntrega = `
+                  <p class="is-size-7 has-text-success has-text-weight-bold mt-2">
+                    <i class="fa-solid fa-calendar-check mr-1"></i> Entregado el: ${formatearFechaHora(d.fechaEntrega)}
+                  </p>
+                `;
+              }
             }
 
             let bloqueExtension = "";
@@ -397,6 +467,7 @@
                   <i class="fa-solid fa-clock mr-1"></i> Plazo: <strong>${d.horasVencer}</strong> |
                   <i class="fa-solid fa-location-dot ml-2 mr-1"></i> Sucursal: ${d.direccionOrigen}
                 </p>
+                ${infoFechaEntrega}
                 ${bloqueExtension}
                 ${controlesVerificacion}
               </div>
