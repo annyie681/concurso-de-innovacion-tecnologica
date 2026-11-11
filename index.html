@@ -38,9 +38,13 @@
         background-color: #A31F05 !important;
         color: #ffffff !important;
       }
+      .title + .subtitle { margin-top: 0.35rem !important; }
     </style>
   </head>
   <body>
+    <!-- Ancla superior para el botón de regresar arriba -->
+    <div id="arriba-pagina"></div>
+
     <!-- Back To Top Start -->
     <a id="backtotop" data-tippy-content="Back To Top.">
       <i class="fa-solid fa-angle-up has-text-white fa-2xl mt-5"></i>
@@ -57,7 +61,7 @@
                 Fundación DDA
               </p>
               <p class="title texto-rojo has-text-weight-bold is-size-3">
-                Donaciones Flexibles: De 24 Horas a 2 Semanas
+                Donaciones Flexibles: De 72 Horas a 2 Semanas
               </p>
               <p class="subtitle texto-rojo is-size-6 mt-3">
                 Únete a nuestra red verificada contra el desperdicio de alimentos: conectamos supermercados, albergues y voluntarios autorizados con trazabilidad antifraude.
@@ -203,8 +207,9 @@
 
             <div id="mensaje-error-reg" class="notification is-danger is-light is-hidden mt-3 p-3 is-size-6"></div>
 
+            <!-- Nombre de botón actualizado a "Registrar Cuenta" -->
             <button type="submit" id="btn-submit-registro" class="button btn-rojo is-fullwidth mt-4">
-              <strong>Verificar en SAT y Enviar Correo</strong>
+              <strong>Registrar Cuenta</strong>
             </button>
           </form>
 
@@ -250,7 +255,7 @@
           <div class="column mr-6">
             <h4 class="title">Paso <span class="blurple">#1</span></h4>
             <p class="subtitle mt-3">
-              Emitir alertas a las organizaciones sociales verificadas cuando un lote de alimentos está próximo a vencer, con la flexibilidad de extender el plazo desde 24 horas hasta 2 semanas.
+              Emitir alertas a las organizaciones sociales verificadas cuando un lote de alimentos está próximo a vencer, con la flexibilidad de extender el plazo desde 72 horas hasta 2 semanas.
             </p>
           </div>
           <div class="column" data-aos="fade-left">
@@ -344,7 +349,8 @@
           <p class="subtitle mt-3 has-text-gray">
             ¡Únete a nuestra magia! Y crea una cuenta verificada con nosotros.
           </p>
-          <a href="#" id="btn-empezar-abajo" class="button is-blurple is-medium"
+          <!-- Botón de empezar configurado para llevar arriba de la página -->
+          <a href="#arriba-pagina" id="btn-empezar-abajo" class="button is-blurple is-medium"
             ><strong><i class="fa-solid fa-arrow-up"></i> Empezar</strong></a
           >
         </div>
@@ -439,9 +445,12 @@
         else if (rol === "repartidor") window.location.assign("panel_repartidor.html");
       }
 
-      // =========================================================================
-      // 1. FUNCIÓN consultarRFCEnSAT (Acepta cualquier RFC válido del SAT)
-      // =========================================================================
+      // Comportamiento del botón Empezar para que suba suavemente a la parte superior de la página
+      document.getElementById("btn-empezar-abajo").addEventListener("click", (e) => {
+        e.preventDefault();
+        document.getElementById("arriba-pagina").scrollIntoView({ behavior: "smooth" });
+      });
+
       const FACTURAPI_KEY = "TU_API_KEY_DE_FACTURAPI";
 
       async function consultarRFCEnSAT(rfc) {
@@ -543,9 +552,6 @@
         return { valido: true };
       }
 
-      // =========================================================================
-      // 2. CONTROL DE SESIÓN Y GENERADOR DE CÓDIGOS ALEATORIOS EN EL HERO
-      // =========================================================================
       const botonesVisitante = document.getElementById("botones-visitante");
       const menuUsuario = document.getElementById("menu-usuario");
       const saludoUsuario = document.getElementById("saludo-usuario");
@@ -650,9 +656,6 @@
         });
       });
 
-      // =========================================================================
-      // 3. LÓGICA DEL MODAL DE REGISTRO + ENVÍO DE CORREO DE VERIFICACIÓN
-      // =========================================================================
       const modalRegistro = document.getElementById("modal-registro");
       const formRegistroIndex = document.getElementById("form-registro-index");
       const pantallaCorreoEnviado = document.getElementById("pantalla-correo-enviado");
@@ -661,7 +664,6 @@
       const errorAunNoVerificado = document.getElementById("error-aun-no-verificado");
 
       const btnAbrirRegistro = document.getElementById("btn-abrir-registro");
-      const btnEmpezarAbajo = document.getElementById("btn-empezar-abajo");
       const btnCerrarModal = document.getElementById("cerrar-modal");
       const fondoModal = document.getElementById("fondo-modal");
       const selectRol = document.getElementById("reg-rol");
@@ -687,7 +689,6 @@
       };
 
       btnAbrirRegistro.addEventListener("click", abrirModal);
-      btnEmpezarAbajo.addEventListener("click", abrirModal);
       btnCerrarModal.addEventListener("click", cerrarModal);
       fondoModal.addEventListener("click", cerrarModal);
 
@@ -715,7 +716,7 @@
         cajaErrorReg.innerText = msg;
         cajaErrorReg.classList.remove("is-hidden");
         btnSubmitReg.disabled = false;
-        btnSubmitReg.innerHTML = "<strong>Verificar en SAT y Enviar Correo</strong>";
+        btnSubmitReg.innerHTML = "<strong>Registrar Cuenta</strong>";
       }
 
       formRegistroIndex.addEventListener("submit", async (e) => {
@@ -738,7 +739,6 @@
         try {
           registrandoUsuario = true;
 
-          // A) Si es Supermercado o Albergue -> Analizar RFC (permite distintas sucursales de la misma cadena)
           if (rol === "donador" || rol === "receptor") {
             const validacion = await analizarRFCCompleto(rfc, nombre, rol);
             if (!validacion.valido) {
@@ -748,7 +748,6 @@
             datosExtra = { rfc: rfc, verificado: true };
           }
 
-          // B) Si es Voluntario -> Verificar código aleatorio del supermercado
           if (rol === "repartidor") {
             if (!codigo) {
               registrandoUsuario = false;
@@ -781,13 +780,9 @@
             };
           }
 
-          // C) Crear cuenta en Firebase Auth
           const credencial = await createUserWithEmailAndPassword(auth, email, password);
-
-          // D) Enviar el correo real de verificación a la bandeja del usuario
           await sendEmailVerification(credencial.user);
 
-          // E) Guardar perfil en Firestore
           await setDoc(doc(db, "usuarios", credencial.user.uid), {
             nombre: nombre,
             email: email,
@@ -796,7 +791,6 @@
             fechaRegistro: new Date().toISOString()
           });
 
-          // F) Mostrar pantalla de "Revisa tu correo" dentro del modal
           rolPendienteRedireccion = rol;
           formRegistroIndex.classList.add("is-hidden");
           textoCorreoDestino.innerHTML = `Enviamos un enlace de confirmación a <strong>${email}</strong>`;
@@ -814,7 +808,6 @@
         }
       });
 
-      // Botón que comprueba si el usuario ya abrió el enlace del correo
       btnComprobarVerificacion.addEventListener("click", async () => {
         errorAunNoVerificado.classList.add("is-hidden");
         btnComprobarVerificacion.disabled = true;
