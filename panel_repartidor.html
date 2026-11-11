@@ -13,6 +13,19 @@
       .texto-rojo { color: #A31F05 !important; }
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
       .title + .subtitle { margin-top: 0.35rem !important; }
+      details.faq-item {
+        background: #fafafa;
+        border-radius: 6px;
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid #A31F05;
+        cursor: pointer;
+      }
+      details.faq-item summary {
+        font-weight: 700;
+        color: #2D4F00;
+        outline: none;
+      }
     </style>
   </head>
   <body>
@@ -39,7 +52,6 @@
     <section class="section">
       <div class="container">
         <div id="contenido-panel">
-          <!-- Tarjeta de identificación del Voluntario para presentar en los Supermercados -->
           <div class="box mb-5">
             <div class="columns is-vcentered">
               <div class="column">
@@ -81,6 +93,41 @@
               </div>
             </div>
           </div>
+
+          <!-- APARTADO DE PREGUNTAS FRECUENTES (EXCLUSIVO PARA VOLUNTARIOS) -->
+          <div class="box mt-5">
+            <h3 class="title is-5 titulo-verde mb-4">
+              <i class="fa-solid fa-circle-question texto-rojo mr-2"></i> Preguntas Frecuentes — Guía para Voluntarios Nuevos
+            </h3>
+
+            <details class="faq-item">
+              <summary>1. ¿Por qué aparece mi código <code>VOL-XXXXXX</code> arriba a la derecha?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                Ese código es tu credencial oficial dentro de la red de supermercados. Cuando aceptes un traslado y llegues a la sucursal del supermercado (Paso 1), el encargado te pedirá ese código para corroborar en su sistema que eres el voluntario verificado antes de entregarte los alimentos.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>2. ¿Cómo sé a qué sucursal ir y dónde queda el albergue?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                Cada solicitud incluye el botón <strong>"Ver Ruta en Maps" / "Abrir GPS en Google Maps"</strong>, el cual traza automáticamente el recorrido en automóvil desde la sucursal del supermercado donador hasta la puerta del albergue receptor.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>3. ¿Cómo finalizo una entrega cuando llego al Albergue (Paso 2)?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                Una vez que el supermercado autorizó tu salida de tienda, en tu tarjeta del viaje se habilitará un campo para ingresar el código del albergue (<code>ALB-XXXX</code>). Al entregar las cajas en el comedor, pídele al encargado su código de recepción, escríbelo ahí y presiona <strong>"Confirmar Entrega"</strong>.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>4. ¿Queda algún comprobante de que entregué la donación a tiempo?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                Sí. En cuanto ingresas el código <code>ALB-XXXX</code> del albergue, el traslado queda marcado como <strong>"✅ Entrega Verificada en Súper y en Albergue"</strong> junto con la fecha y hora exacta de finalización, visible tanto para ti como para el supermercado y el albergue.
+              </p>
+            </details>
+          </div>
         </div>
       </div>
     </section>
@@ -108,6 +155,19 @@
 
       let uidActivo = null;
       let datosVoluntario = null;
+
+      function formatearFechaHora(isoString) {
+        if (!isoString) return "";
+        const fecha = new Date(isoString);
+        return fecha.toLocaleString("es-MX", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
 
       const sesionGuardada = JSON.parse(localStorage.getItem("dda_sesion_activa") || "null");
       if (sesionGuardada) {
@@ -141,7 +201,6 @@
         }
       });
 
-      // Al aceptar ir por la comida, avisa al Súper que el voluntario va hacia la tienda
       window.aceptarViaje = async (donacionId) => {
         await updateDoc(doc(db, "donaciones", donacionId), {
           estado: "voluntario_en_tienda",
@@ -152,7 +211,6 @@
         });
       };
 
-      // Paso 2 Antifraude: Cuando el voluntario llega al Albergue, mete el código ALB-XXXX del Albergue
       window.confirmarEntregaEnAlbergue = async (donacionId, codigoAlbergueReal) => {
         const inputPin = document.getElementById(`pin-entrega-${donacionId}`);
         const pinIngresado = inputPin.value.trim().toUpperCase();
@@ -248,9 +306,15 @@
                   </div>
                 `;
               } else if (d.estado === "entregada") {
+                const textoFecha = d.fechaEntrega
+                  ? `<p class="is-size-7 has-text-success has-text-weight-bold mt-2">
+                       <i class="fa-solid fa-calendar-check mr-1"></i> Entregado el: ${formatearFechaHora(d.fechaEntrega)}
+                     </p>`
+                  : "";
                 bloquePasoActual = `
                   <div class="mt-2">
                     <span class="tag is-success is-medium">✅ Entrega Verificada en Súper y en Albergue (${d.codigoEntrega})</span>
+                    ${textoFecha}
                   </div>
                 `;
               }
