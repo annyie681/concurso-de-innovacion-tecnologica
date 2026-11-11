@@ -14,6 +14,19 @@
       .btn-rojo { background-color: #A31F05 !important; color: white !important; }
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
       .title + .subtitle { margin-top: 0.35rem !important; }
+      details.faq-item {
+        background: #fafafa;
+        border-radius: 6px;
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid #2D4F00;
+        cursor: pointer;
+      }
+      details.faq-item summary {
+        font-weight: 700;
+        color: #2D4F00;
+        outline: none;
+      }
     </style>
   </head>
   <body>
@@ -84,6 +97,44 @@
               </div>
             </div>
           </div>
+
+          <!-- APARTADO DE PREGUNTAS FRECUENTES (EXCLUSIVO PARA ALBERGUES) -->
+          <div class="box mt-5">
+            <h3 class="title is-5 titulo-verde mb-4">
+              <i class="fa-solid fa-circle-question texto-rojo mr-2"></i> Preguntas Frecuentes — Guía para Albergues y Comedores Nuevos
+            </h3>
+
+            <details class="faq-item">
+              <summary>1. ¿Cuál es la diferencia entre "Nosotros vamos al Súper" y "Pedir Voluntario Verificado"?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                • Si eliges <strong>"Nosotros vamos al Súper a recogerlo"</strong>, el lote queda apartado para que personal de tu albergue acuda directamente a la sucursal del supermercado.
+                <br>• Si no cuentan con vehículo disponible, elige <strong>"Pedir Voluntario Verificado"</strong> (recuerda escribir primero la dirección de tu albergue arriba) para que un voluntario avalado por los supermercados recoja la donación y la lleve hasta tu puerta.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>2. ¿Qué pasa si elegí ir directamente al supermercado pero surgió un imprevisto?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                ¡No pierdes la donación! En la columna derecha ("Mis Donaciones"), dentro de la tarjeta de ese lote verás el botón amarillo <strong>"¿Ya no puedes ir? Pedir Voluntario Verificado"</strong>, el cual transfiere inmediatamente la solicitud a la red de voluntarios con auto.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>3. ¿Cómo funciona mi código secreto <code>ALB-XXXX</code> y a quién se lo debo dar?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                Es tu llave de seguridad antifraude. <strong>Jamás lo compartas por adelantado</strong>:
+                <br>• Si tú vas al supermercado por la comida, díctale ese código al encargado del súper cuando te entregue las cajas.
+                <br>• Si un voluntario te lleva la donación a tu albergue, díctale el código al voluntario únicamente cuando ya tengas los alimentos frente a ti.
+              </p>
+            </details>
+
+            <details class="faq-item">
+              <summary>4. ¿Dónde puedo consultar a qué hora exacta se entregó cada donación?</summary>
+              <p class="is-size-6 has-text-grey-dark mt-2">
+                En cuanto el supermercado o el voluntario ingresa tu código <code>ALB-XXXX</code>, el estado cambia a <strong>"✅ Entrega Completada"</strong> y debajo aparece registrada automáticamente la fecha y hora exacta en que recibiste los alimentos.
+              </p>
+            </details>
+          </div>
         </div>
       </div>
     </section>
@@ -112,6 +163,19 @@
       let uidActivo = null;
       let datosAlbergue = null;
       let coordsAlbergue = null;
+
+      function formatearFechaHora(isoString) {
+        if (!isoString) return "";
+        const fecha = new Date(isoString);
+        return fecha.toLocaleString("es-MX", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
 
       const sesionGuardada = JSON.parse(localStorage.getItem("dda_sesion_activa") || "null");
       if (sesionGuardada) {
@@ -242,6 +306,7 @@
               let estadoTexto = "";
               let instruccionPin = "";
               let botonExtra = "";
+              let infoFechaEntrega = "";
 
               if (d.estado === "recoge_albergue") {
                 estadoTexto = `<span class="tag is-primary">🏢 Vamos a recogerlo directo al Súper</span>`;
@@ -259,6 +324,13 @@
                 instruccionPin = `Entrégale este código a <strong>${d.repartidorNombre}</strong> cuando te entregue los alimentos en la puerta:`;
               } else if (d.estado === "entregada") {
                 estadoTexto = `<span class="tag is-success">✅ Entrega Completada y Verificada sin Fraude</span>`;
+                if (d.fechaEntrega) {
+                  infoFechaEntrega = `
+                    <p class="is-size-7 has-text-success has-text-weight-bold mt-2">
+                      <i class="fa-solid fa-calendar-check mr-1"></i> Recibido el: ${formatearFechaHora(d.fechaEntrega)}
+                    </p>
+                  `;
+                }
               }
 
               let cajaPinSecreto = "";
@@ -282,6 +354,7 @@
                   <p class="is-size-7 has-text-grey">
                     Supermercado: <strong>${d.supermercadoNombre}</strong> (${d.direccionOrigen})
                   </p>
+                  ${infoFechaEntrega}
                   ${cajaPinSecreto}
                   ${botonExtra}
                 </div>
