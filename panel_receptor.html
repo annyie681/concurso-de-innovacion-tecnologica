@@ -13,7 +13,6 @@
       .texto-rojo { color: #A31F05 !important; }
       .btn-rojo { background-color: #A31F05 !important; color: white !important; }
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
-      /* Evita que Bulma encime los subtítulos sobre los títulos */
       .title + .subtitle { margin-top: 0.35rem !important; }
     </style>
   </head>
@@ -40,18 +39,6 @@
 
     <section class="section">
       <div class="container">
-        <div id="aviso-correo" class="notification is-warning is-light mb-4 is-hidden">
-          <div class="is-flex is-justify-content-space-between is-align-items-center" style="flex-wrap: wrap; gap: 0.5rem;">
-            <span>
-              <strong>📧 Confirmación de correo pendiente:</strong> Revisa tu bandeja de entrada o Spam para confirmar tu correo.
-            </span>
-            <div class="buttons mb-0">
-              <button id="btn-comprobar-correo" class="button is-success is-small">Ya abrí el enlace</button>
-              <button id="btn-reenviar-correo" class="button is-warning is-small">Reenviar correo</button>
-            </div>
-          </div>
-        </div>
-
         <div id="contenido-panel">
           <div class="box mb-5">
             <h1 class="title is-4 titulo-verde mb-2" id="nombre-albergue">Cargando albergue...</h1>
@@ -72,9 +59,6 @@
                 </button>
               </div>
             </div>
-            <p id="aviso-gps-albergue" class="help has-text-grey">
-              Ingresa tu dirección arriba. Puedes pasar tú mismo por la donación o pedir que un voluntario verificado te la lleve.
-            </p>
           </div>
 
           <div class="columns">
@@ -92,7 +76,7 @@
             <div class="column is-6">
               <div class="box">
                 <h3 class="title is-5 titulo-verde">
-                  <i class="fa-solid fa-shield-halved mr-2"></i> Mis Donaciones y Códigos de Recepción
+                  <i class="fa-solid fa-shield-halved mr-2"></i> Mis Donaciones y Código Antifraude (ALB)
                 </h3>
                 <div id="lista-solicitadas">
                   <p class="has-text-grey">Aún no has solicitado lotes.</p>
@@ -106,20 +90,9 @@
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
       import {
-        getAuth,
-        onAuthStateChanged,
-        signOut,
-        sendEmailVerification
-      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-      import {
-        getFirestore,
-        doc,
-        getDoc,
-        setDoc,
-        updateDoc,
-        collection,
-        onSnapshot
+        getFirestore, doc, getDoc, updateDoc, collection, onSnapshot
       } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -134,7 +107,6 @@
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
-      auth.languageCode = "es";
       const db = getFirestore(app);
 
       let uidActivo = null;
@@ -157,87 +129,41 @@
           window.location.replace("login.html");
           return;
         }
-
         if (user) {
           uidActivo = user.uid;
-
-          if (!user.emailVerified) {
-            document.getElementById("aviso-correo").classList.remove("is-hidden");
-          }
-
-          try {
-            const docSnap = await getDoc(doc(db, "usuarios", user.uid));
-            if (docSnap.exists()) {
-              datosAlbergue = docSnap.data();
-            } else {
-              datosAlbergue = {
-                nombre: sesionGuardada?.nombre || user.email,
-                email: user.email,
-                rol: "receptor",
-                rfc: sesionGuardada?.rfc || "Autorizado",
-                verificado: true
-              };
-              await setDoc(doc(db, "usuarios", user.uid), datosAlbergue);
-            }
-
+          const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+          if (docSnap.exists()) {
+            datosAlbergue = docSnap.data();
             document.getElementById("nombre-albergue").innerText = datosAlbergue.nombre || user.email;
             document.getElementById("rfc-albergue").innerText = `✅ Asociación Verificada ante SAT (RFC: ${datosAlbergue.rfc || "Autorizado"})`;
-            escucharDonaciones();
-          } catch (err) {
-            console.warn("Usando sesión activa local:", err);
           }
-        }
-      });
-
-      document.getElementById("btn-comprobar-correo").addEventListener("click", async () => {
-        if (auth.currentUser) {
-          await auth.currentUser.reload();
-          if (auth.currentUser.emailVerified) {
-            document.getElementById("aviso-correo").classList.add("is-hidden");
-            alert("¡Correo confirmado!");
-          } else {
-            alert("Aún no detectamos la confirmación. Abre el enlace del correo.");
-          }
-        }
-      });
-
-      document.getElementById("btn-reenviar-correo").addEventListener("click", async () => {
-        try {
-          if (auth.currentUser) {
-            await sendEmailVerification(auth.currentUser);
-            alert("¡Correo reenviado! Revisa tu bandeja de entrada o Spam.");
-          }
-        } catch (e) {
-          alert("Espera unos segundos antes de solicitar otro correo: " + e.message);
+          escucharDonaciones();
         }
       });
 
       document.getElementById("btn-gps-albergue").addEventListener("click", () => {
-        const aviso = document.getElementById("aviso-gps-albergue");
         if (!navigator.geolocation) return;
         navigator.geolocation.getCurrentPosition((pos) => {
           coordsAlbergue = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          aviso.innerText = `✅ Coordenadas GPS del albergue listas (${coordsAlbergue.lat.toFixed(4)}, ${coordsAlbergue.lng.toFixed(4)})`;
-          aviso.className = "help has-text-success has-text-weight-bold";
+          alert("✅ Coordenadas GPS del albergue guardadas.");
         });
       });
 
-      function generarPinAntifraude() {
+      function generarPinAlbergue() {
         const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
         let pin = "";
         for (let i = 0; i < 4; i++) {
           pin += chars.charAt(Math.floor(Math.random() * chars.length));
         }
-        return `ENT-${pin}`;
+        return `ALB-${pin}`;
       }
 
       window.recogerDirectamente = async (donacionId) => {
         const direccionDestino = document.getElementById("direccion-albergue").value.trim() || "Recolección directa en sucursal";
-        const pinSecreto = generarPinAntifraude();
+        const pinSecreto = generarPinAlbergue();
 
         await updateDoc(doc(db, "donaciones", donacionId), {
           estado: "recoge_albergue",
-          modalidadEntrega: "Recolección directa por Albergue",
           albergueId: uidActivo,
           albergueNombre: datosAlbergue?.nombre || "Albergue Verificado",
           direccionDestino: direccionDestino,
@@ -250,16 +176,15 @@
       window.pedirVoluntarioVerificado = async (donacionId) => {
         const direccionDestino = document.getElementById("direccion-albergue").value.trim();
         if (!direccionDestino) {
-          alert("Por favor escribe arriba la dirección de tu Albergue para que el voluntario verificado sepa a dónde llevártela.");
+          alert("Escribe arriba la dirección de tu Albergue para que el voluntario sepa a dónde llevar la donación.");
           document.getElementById("direccion-albergue").focus();
           return;
         }
 
-        const pinSecreto = generarPinAntifraude();
+        const pinSecreto = generarPinAlbergue();
 
         await updateDoc(doc(db, "donaciones", donacionId), {
           estado: "solicitada",
-          modalidadEntrega: "Solicitado a Voluntarios Verificados",
           albergueId: uidActivo,
           albergueNombre: datosAlbergue?.nombre || "Albergue Verificado",
           direccionDestino: direccionDestino,
@@ -272,14 +197,11 @@
       window.cambiarAVoluntario = async (donacionId) => {
         const direccionDestino = document.getElementById("direccion-albergue").value.trim();
         if (!direccionDestino) {
-          alert("Escribe primero arriba la dirección de entrega de tu Albergue antes de pedir un voluntario.");
-          document.getElementById("direccion-albergue").focus();
+          alert("Escribe arriba la dirección de tu Albergue antes de pedir un voluntario.");
           return;
         }
-
         await updateDoc(doc(db, "donaciones", donacionId), {
           estado: "solicitada",
-          modalidadEntrega: "Transferido a Voluntarios Verificados",
           direccionDestino: direccionDestino,
           coordsDestino: coordsAlbergue
         });
@@ -306,10 +228,9 @@
                     <i class="fa-solid fa-clock mr-1"></i> Tiempo límite: <strong>${d.horasVencer}</strong> |
                     <i class="fa-solid fa-location-dot ml-1 mr-1"></i> Sucursal: ${d.direccionOrigen}
                   </p>
-                  <p class="is-size-7 has-text-weight-bold mb-2">¿Cómo deseas recolectar este lote?</p>
                   <div class="buttons">
                     <button class="button btn-verde is-small" onclick="recogerDirectamente('${id}')">
-                      <strong><i class="fa-solid fa-person-walking-luggage mr-1"></i> Nosotros pasamos a recogerlo</strong>
+                      <strong><i class="fa-solid fa-person-walking-luggage mr-1"></i> Nosotros vamos al Súper a recogerlo</strong>
                     </button>
                     <button class="button btn-rojo is-small" onclick="pedirVoluntarioVerificado('${id}')">
                       <strong><i class="fa-solid fa-car-side mr-1"></i> No podemos ir: Pedir Voluntario Verificado</strong>
@@ -319,31 +240,25 @@
               `;
             } else if (d.albergueId === uidActivo) {
               let estadoTexto = "";
+              let instruccionPin = "";
               let botonExtra = "";
 
               if (d.estado === "recoge_albergue") {
-                const origenMapa = d.coordsOrigen
-                  ? `${d.coordsOrigen.lat},${d.coordsOrigen.lng}`
-                  : encodeURIComponent(d.direccionOrigen || "");
-                const urlSucursal = `https://www.google.com/maps/search/?api=1&query=${origenMapa}`;
-
-                estadoTexto = `<span class="tag is-primary">🏢 Recolección directa por nuestro Albergue</span>`;
+                estadoTexto = `<span class="tag is-primary">🏢 Vamos a recogerlo directo al Súper</span>`;
+                instruccionPin = `Muestra o dicta este código <strong>en el Supermercado (${d.supermercadoNombre})</strong> cuando recojas el lote:`;
                 botonExtra = `
-                  <div class="buttons mt-2">
-                    <a href="${urlSucursal}" target="_blank" class="button is-link is-light is-small">
-                      <i class="fa-solid fa-map-location-dot mr-1"></i> Ver ubicación del Súper
-                    </a>
-                    <button class="button is-warning is-light is-small" onclick="cambiarAVoluntario('${id}')">
-                      <i class="fa-solid fa-car mr-1"></i> ¿No puedes ir? Enviar solicitud a Voluntarios Verificados
-                    </button>
-                  </div>
+                  <button class="button is-warning is-light is-small mt-2" onclick="cambiarAVoluntario('${id}')">
+                    <i class="fa-solid fa-car mr-1"></i> ¿Ya no puedes ir? Pedir Voluntario Verificado
+                  </button>
                 `;
-              } else if (d.estado === "solicitada") {
-                estadoTexto = `<span class="tag is-warning">📡 Solicitud enviada a Voluntarios Verificados</span>`;
+              } else if (d.estado === "solicitada" || d.estado === "voluntario_en_tienda") {
+                estadoTexto = `<span class="tag is-warning">📡 Voluntario en proceso de recolección en el Súper</span>`;
+                instruccionPin = `Guarda este código. Se lo darás <strong>al Voluntario</strong> únicamente cuando llegue a tu Albergue con la comida:`;
               } else if (d.estado === "en_camino") {
-                estadoTexto = `<span class="tag is-info">🚗 En camino con voluntario verificado: ${d.repartidorNombre}</span>`;
+                estadoTexto = `<span class="tag is-info">🚗 El Súper ya validó al voluntario (${d.repartidorNombre}) y viene en camino</span>`;
+                instruccionPin = `Entrégale este código a <strong>${d.repartidorNombre}</strong> cuando te entregue los alimentos en la puerta:`;
               } else if (d.estado === "entregada") {
-                estadoTexto = `<span class="tag is-success">✅ Entrega Confirmada con Código Antifraude</span>`;
+                estadoTexto = `<span class="tag is-success">✅ Entrega Completada y Verificada sin Fraude</span>`;
               }
 
               let cajaPinSecreto = "";
@@ -351,7 +266,7 @@
                 cajaPinSecreto = `
                   <div class="box p-3 mt-3 has-background-white" style="border-left: 4px solid #2D4F00;">
                     <p class="is-size-7 has-text-grey mb-1">
-                      <i class="fa-solid fa-lock mr-1"></i> <strong>Código Antifraude de Recepción:</strong> (Solo proporciónalo cuando tengas los alimentos frente a ti)
+                      <i class="fa-solid fa-lock mr-1"></i> ${instruccionPin}
                     </p>
                     <p class="title is-4 titulo-verde mb-0" style="letter-spacing: 3px;">${d.codigoEntrega}</p>
                   </div>
@@ -365,7 +280,7 @@
                     ${estadoTexto}
                   </div>
                   <p class="is-size-7 has-text-grey">
-                    Supermercado: <strong>${d.supermercadoNombre}</strong> (${d.direccionOrigen}) | Plazo: ${d.horasVencer}
+                    Supermercado: <strong>${d.supermercadoNombre}</strong> (${d.direccionOrigen})
                   </p>
                   ${cajaPinSecreto}
                   ${botonExtra}
