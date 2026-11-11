@@ -13,7 +13,6 @@
       .texto-rojo { color: #A31F05 !important; }
       .btn-verde { background-color: #2D4F00 !important; color: white !important; }
       .btn-rojo { background-color: #A31F05 !important; color: white !important; }
-      /* Evita que Bulma encime los subtítulos sobre los títulos */
       .title + .subtitle { margin-top: 0.35rem !important; }
     </style>
   </head>
@@ -40,18 +39,6 @@
 
     <section class="section">
       <div class="container">
-        <div id="aviso-correo" class="notification is-warning is-light mb-4 is-hidden">
-          <div class="is-flex is-justify-content-space-between is-align-items-center" style="flex-wrap: wrap; gap: 0.5rem;">
-            <span>
-              <strong>📧 Confirmación de correo pendiente:</strong> Revisa tu bandeja de entrada o Spam para confirmar tu correo electrónico.
-            </span>
-            <div class="buttons mb-0">
-              <button id="btn-comprobar-correo" class="button is-success is-small">Ya abrí el enlace</button>
-              <button id="btn-reenviar-correo" class="button is-warning is-small">Reenviar correo</button>
-            </div>
-          </div>
-        </div>
-
         <div id="contenido-panel">
           <div class="box mb-5">
             <div class="columns is-vcentered">
@@ -62,13 +49,14 @@
               <div class="column is-narrow">
                 <div class="notification is-light p-3 mb-0 has-text-centered">
                   <p class="is-size-7 has-text-weight-bold titulo-verde mb-2">
-                    <i class="fa-solid fa-id-card-clip mr-1"></i> AUTORIZAR VOLUNTARIO REPARTIDOR
+                    <i class="fa-solid fa-id-card-clip mr-1"></i> CREDENCIAL PARA VOLUNTARIO
                   </p>
                   <button id="btn-crear-codigo" class="button btn-verde is-small is-fullwidth">
-                    <i class="fa-solid fa-key mr-1"></i> Generar código aleatorio (1 uso)
+                    <i class="fa-solid fa-key mr-1"></i> Generar código de voluntario
                   </button>
                   <div id="caja-codigo" class="mt-2 is-hidden">
                     <span class="tag is-warning is-medium has-text-weight-bold" id="codigo-mostrado" style="letter-spacing: 2px;"></span>
+                    <p class="is-size-7 has-text-grey mt-1">El voluntario deberá presentar este código en tienda al recoger comida.</p>
                   </div>
                 </div>
               </div>
@@ -137,7 +125,7 @@
             <div class="column is-7">
               <div class="box">
                 <h3 class="title is-5 titulo-verde">
-                  <i class="fa-solid fa-truck-fast mr-2"></i> Trazabilidad y Extensión de Plazos
+                  <i class="fa-solid fa-truck-fast mr-2"></i> Control de Entregas y Verificación en Sucursal
                 </h3>
                 <div id="lista-mis-donaciones">
                   <p class="has-text-grey">Cargando lotes...</p>
@@ -151,23 +139,9 @@
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
       import {
-        getAuth,
-        onAuthStateChanged,
-        signOut,
-        sendEmailVerification
-      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-      import {
-        getFirestore,
-        doc,
-        getDoc,
-        setDoc,
-        updateDoc,
-        collection,
-        addDoc,
-        query,
-        where,
-        onSnapshot
+        getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, query, where, onSnapshot
       } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -182,7 +156,6 @@
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
-      auth.languageCode = "es";
       const db = getFirestore(app);
 
       let uidActivo = null;
@@ -205,61 +178,19 @@
           window.location.replace("login.html");
           return;
         }
-
         if (user) {
           uidActivo = user.uid;
-
-          if (!user.emailVerified) {
-            document.getElementById("aviso-correo").classList.remove("is-hidden");
-          }
-
-          try {
-            const docSnap = await getDoc(doc(db, "usuarios", user.uid));
-            if (docSnap.exists()) {
-              datosSuper = docSnap.data();
-            } else {
-              datosSuper = {
-                nombre: sesionGuardada?.nombre || user.email,
-                email: user.email,
-                rol: "donador",
-                rfc: sesionGuardada?.rfc || "CLE810525EA1",
-                verificado: true
-              };
-              await setDoc(doc(db, "usuarios", user.uid), datosSuper);
-            }
-
+          const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+          if (docSnap.exists()) {
+            datosSuper = docSnap.data();
             document.getElementById("nombre-super").innerText = datosSuper.nombre || user.email;
             document.getElementById("rfc-super").innerText = `✅ RFC Verificado ante SAT: ${datosSuper.rfc || "Autorizado"}`;
-            escucharMisDonaciones(uidActivo);
-          } catch (err) {
-            console.warn("Usando sesión activa local:", err);
           }
+          escucharMisDonaciones(uidActivo);
         }
       });
 
-      document.getElementById("btn-comprobar-correo").addEventListener("click", async () => {
-        if (auth.currentUser) {
-          await auth.currentUser.reload();
-          if (auth.currentUser.emailVerified) {
-            document.getElementById("aviso-correo").classList.add("is-hidden");
-            alert("¡Correo verificado con éxito!");
-          } else {
-            alert("Todavía no aparece confirmado. Haz clic en el enlace que llegó a tu correo.");
-          }
-        }
-      });
-
-      document.getElementById("btn-reenviar-correo").addEventListener("click", async () => {
-        try {
-          if (auth.currentUser) {
-            await sendEmailVerification(auth.currentUser);
-            alert("¡Correo de verificación enviado! Revisa tu bandeja de entrada y Spam.");
-          }
-        } catch (e) {
-          alert("Espera un momento antes de volver a enviarlo: " + e.message);
-        }
-      });
-
+      // Generar código de identificación para voluntario (Compartido en la red de supermercados)
       document.getElementById("btn-crear-codigo").addEventListener("click", async () => {
         if (!uidActivo) return;
         const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -273,6 +204,7 @@
           supermercadoId: uidActivo,
           supermercadoNombre: datosSuper?.nombre || "Supermercado Verificado",
           usado: false,
+          activoParaRecoger: true,
           fechaCreacion: new Date().toISOString()
         });
 
@@ -283,17 +215,11 @@
       document.getElementById("btn-ubicacion").addEventListener("click", () => {
         const estadoGps = document.getElementById("estado-gps");
         if (!navigator.geolocation) return;
-        estadoGps.innerText = "Obteniendo coordenadas GPS...";
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            coordsSuper = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            estadoGps.innerText = `✅ GPS adjuntado (${coordsSuper.lat.toFixed(4)}, ${coordsSuper.lng.toFixed(4)})`;
-            estadoGps.className = "help has-text-success has-text-weight-bold";
-          },
-          () => {
-            estadoGps.innerText = "No se pudo obtener el GPS, se usará la dirección escrita.";
-          }
-        );
+        navigator.geolocation.getCurrentPosition((pos) => {
+          coordsSuper = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          estadoGps.innerText = `✅ GPS adjuntado (${coordsSuper.lat.toFixed(4)}, ${coordsSuper.lng.toFixed(4)})`;
+          estadoGps.className = "help has-text-success has-text-weight-bold";
+        });
       });
 
       document.getElementById("form-donacion").addEventListener("submit", async (e) => {
@@ -314,11 +240,7 @@
             estado: "disponible",
             fechaPublicacion: new Date().toISOString()
           });
-
           document.getElementById("form-donacion").reset();
-          document.getElementById("estado-gps").innerText = "✅ Lote publicado con éxito.";
-        } catch (err) {
-          alert("Error al publicar lote: " + err.message);
         } finally {
           btn.disabled = false;
         }
@@ -327,24 +249,19 @@
       window.extenderTiempoDonacion = async (donacionId) => {
         const selectNuevo = document.getElementById(`ext-${donacionId}`);
         if (!selectNuevo || !selectNuevo.value) return;
-
         await updateDoc(doc(db, "donaciones", donacionId), {
-          horasVencer: selectNuevo.value + " (Plazo extendido)",
-          ultimaExtension: new Date().toISOString()
+          horasVencer: selectNuevo.value + " (Plazo extendido)"
         });
-        alert("✅ Tiempo de donación extendido a: " + selectNuevo.value);
+        alert("✅ Tiempo límite extendido a: " + selectNuevo.value);
       };
 
-      window.validarPinEntregaEnTienda = async (donacionId, codigoReal) => {
-        const inputPin = document.getElementById(`pin-tienda-${donacionId}`);
-        const pinIngresado = inputPin.value.trim().toUpperCase();
+      // CASO A: El Albergue fue en persona al Súper -> El Súper ingresa el código ALB-XXXX del Albergue
+      window.verificarRecoleccionDeAlbergue = async (donacionId, codigoAlbergueReal) => {
+        const input = document.getElementById(`pin-albergue-${donacionId}`);
+        const ingresado = input.value.trim().toUpperCase();
 
-        if (!pinIngresado) {
-          alert("Ingresa el código de verificación que te dicte el representante del albergue.");
-          return;
-        }
-        if (pinIngresado !== codigoReal) {
-          alert("❌ Código incorrecto. Pídele al albergue el código exacto que aparece en su panel.");
+        if (ingresado !== codigoAlbergueReal) {
+          alert("❌ Código incorrecto. Pídele al representante del Albergue el código ALB-XXXX que aparece en su panel.");
           return;
         }
 
@@ -353,7 +270,33 @@
           verificadoConCodigo: true,
           fechaEntrega: new Date().toISOString()
         });
-        alert("✅ Código verificado correctamente. Entrega confirmada sin fraude.");
+        alert("✅ Código del Albergue verificado. ¡Donación entregada con éxito!");
+      };
+
+      // CASO B: Va un Voluntario al Súper -> El Súper le pide su código VOL-XXXX para comprobar que es un voluntario real antes de darle la comida
+      window.verificarVoluntarioEnTienda = async (donacionId, codigoVoluntarioEsperado) => {
+        const input = document.getElementById(`pin-vol-${donacionId}`);
+        const ingresado = input.value.trim().toUpperCase();
+
+        if (!ingresado) {
+          alert("Ingresa el código VOL-XXXX que te muestre el voluntario.");
+          return;
+        }
+
+        // Verifica que coincida con el código del voluntario asignado o que exista en el padrón global de voluntarios
+        const docCodigo = await getDoc(doc(db, "codigos_voluntarios", ingresado));
+        if (ingresado !== codigoVoluntarioEsperado && !docCodigo.exists()) {
+          alert("❌ Ese código no pertenece a ningún voluntario autorizado por los supermercados. No entregues el lote.");
+          return;
+        }
+
+        await updateDoc(doc(db, "donaciones", donacionId), {
+          estado: "en_camino",
+          voluntarioVerificadoEnTienda: true,
+          codigoVoluntarioValidado: ingresado,
+          fechaSalidaTienda: new Date().toISOString()
+        });
+        alert("✅ Identidad del voluntario verificada en sucursal. El lote ya va en camino al Albergue.");
       };
 
       function escucharMisDonaciones(uid) {
@@ -372,33 +315,52 @@
             const id = docSnap.id;
 
             let badge = `<span class="tag is-info">Disponible para Albergues</span>`;
-            let controlesExtra = "";
+            let controlesVerificacion = "";
 
             if (d.estado === "recoge_albergue") {
-              badge = `<span class="tag is-primary">🏢 El Albergue (${d.albergueNombre}) pasará a recogerlo</span>`;
-              controlesExtra = `
-                <div class="box p-3 mt-3" style="background-color: #f9f9f9;">
-                  <p class="is-size-7 has-text-weight-bold mb-2">
-                    🔒 Cuando llegue el personal de <strong>${d.albergueNombre}</strong>, ingresa su código de recepción para liberar la entrega:
+              badge = `<span class="tag is-primary">🏢 El Albergue (${d.albergueNombre}) pasará a sucursal</span>`;
+              controlesVerificacion = `
+                <div class="box p-3 mt-3" style="background-color: #fff;">
+                  <p class="is-size-7 has-text-weight-bold titulo-verde mb-2">
+                    🔒 Entrega directa al Albergue: Pídele a <strong>${d.albergueNombre}</strong> su código de recepción (ALB-XXXX) para entregarle el lote:
                   </p>
                   <div class="field has-addons">
                     <div class="control is-expanded">
-                      <input class="input is-small" type="text" id="pin-tienda-${id}" placeholder="Ej. ENT-4829" style="text-transform: uppercase;">
+                      <input class="input is-small" type="text" id="pin-albergue-${id}" placeholder="Código del Albergue (Ej. ALB-4829)" style="text-transform: uppercase;">
                     </div>
                     <div class="control">
-                      <button class="button is-success is-small" onclick="validarPinEntregaEnTienda('${id}', '${d.codigoEntrega}')">
-                        <strong>Verificar y Entregar</strong>
+                      <button class="button is-success is-small" onclick="verificarRecoleccionDeAlbergue('${id}', '${d.codigoEntrega}')">
+                        <strong>Confirmar Entrega al Albergue</strong>
                       </button>
                     </div>
                   </div>
                 </div>
               `;
             } else if (d.estado === "solicitada") {
-              badge = `<span class="tag is-warning">Solicitada por: ${d.albergueNombre} (Buscando Voluntario Verificado)</span>`;
+              badge = `<span class="tag is-warning">Solicitada por ${d.albergueNombre} (Esperando Voluntario)</span>`;
+            } else if (d.estado === "voluntario_en_tienda") {
+              badge = `<span class="tag is-warning is-light">🙋‍♂️ Voluntario ${d.repartidorNombre} viene a recoger</span>`;
+              controlesVerificacion = `
+                <div class="box p-3 mt-3" style="background-color: #fff; border-left: 4px solid #A31F05;">
+                  <p class="is-size-7 has-text-weight-bold texto-rojo mb-2">
+                    🛡️ Paso 1 Antifraude: Cuando llegue el voluntario <strong>${d.repartidorNombre}</strong>, pídele su código de voluntario (VOL-XXXX) para comprobar que está autorizado antes de darle la comida:
+                  </p>
+                  <div class="field has-addons">
+                    <div class="control is-expanded">
+                      <input class="input is-small" type="text" id="pin-vol-${id}" placeholder="Código del Voluntario (Ej. VOL-8F3K9A)" style="text-transform: uppercase;">
+                    </div>
+                    <div class="control">
+                      <button class="button btn-rojo is-small" onclick="verificarVoluntarioEnTienda('${id}', '${d.codigoVoluntario || ""}')">
+                        <strong>Autorizar Salida de Tienda</strong>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `;
             } else if (d.estado === "en_camino") {
-              badge = `<span class="tag is-link">🚗 En camino con voluntario: ${d.repartidorNombre}</span>`;
+              badge = `<span class="tag is-link">🚗 Voluntario Verificado en tienda (${d.repartidorNombre}) -> En camino al Albergue</span>`;
             } else if (d.estado === "entregada") {
-              badge = `<span class="tag is-success">✅ Entregada y Verificada con Código en ${d.albergueNombre}</span>`;
+              badge = `<span class="tag is-success">✅ Entregada y Confirmada con Código en ${d.albergueNombre}</span>`;
             }
 
             let bloqueExtension = "";
@@ -409,17 +371,16 @@
                     <div class="select is-small">
                       <select id="ext-${id}">
                         <option value="">Extender tiempo límite...</option>
-                        <option value="72 horas (3 días)">Extender a 72 horas (3 días)</option>
-                        <option value="5 días">Extender a 5 días</option>
-                        <option value="1 semana (7 días)">Extender a 1 semana (7 días)</option>
-                        <option value="10 días">Extender a 10 días</option>
-                        <option value="2 semanas (14 días)">Extender a 2 semanas (14 días - Máx.)</option>
+                        <option value="72 horas (3 días)">72 horas (3 días)</option>
+                        <option value="5 días">5 días</option>
+                        <option value="1 semana (7 días)">1 semana (7 días)</option>
+                        <option value="2 semanas (14 días)">2 semanas (14 días - Máx.)</option>
                       </select>
                     </div>
                   </div>
                   <div class="control">
                     <button class="button is-info is-light is-small" onclick="extenderTiempoDonacion('${id}')">
-                      <i class="fa-solid fa-calendar-plus mr-1"></i> Extender plazo
+                      <i class="fa-solid fa-calendar-plus mr-1"></i> Extender
                     </button>
                   </div>
                 </div>
@@ -433,11 +394,11 @@
                   ${badge}
                 </div>
                 <p class="is-size-7 has-text-grey">
-                  <i class="fa-solid fa-clock mr-1"></i> Tiempo límite actual: <strong>${d.horasVencer}</strong> |
+                  <i class="fa-solid fa-clock mr-1"></i> Plazo: <strong>${d.horasVencer}</strong> |
                   <i class="fa-solid fa-location-dot ml-2 mr-1"></i> Sucursal: ${d.direccionOrigen}
                 </p>
                 ${bloqueExtension}
-                ${controlesExtra}
+                ${controlesVerificacion}
               </div>
             `;
           });
